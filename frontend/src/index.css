@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/* Keep your custom body style below it */
+body {
+  margin: 0;
+  background-color: #0a0a0a;
+  color: #ffffd5; /* Sets default text to brand-beige */
+}
