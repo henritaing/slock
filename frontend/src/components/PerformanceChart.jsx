@@ -1,13 +1,16 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const PerformanceChart = ({ marketData, portfolio, viewMode }) => {
+const PerformanceChart = ({ marketData, portfolio, viewMode, colors, selectedTickers, onTickerClick }) => {
   if (!marketData || Object.keys(marketData).length === 0) return null;
 
   const tickers = Object.keys(marketData);
   const benchSymbols = ["^GSPC", "URTH", "^FCHI"];
+  
+  // NEW: Point to .history for the iteration
+  const firstTickerHistory = marketData[tickers[0]]?.history || [];
 
-  const chartData = marketData[tickers[0]].map((entry, index) => {
+  const chartData = firstTickerHistory.map((entry, index) => {
     const dataPoint = { date: entry.date };
     
     if (viewMode === 'portfolio') {
@@ -15,7 +18,8 @@ const PerformanceChart = ({ marketData, portfolio, viewMode }) => {
       let weightedReturn = 0;
 
       portfolio.forEach(item => {
-        const day = marketData[item.ticker]?.[index];
+        // NEW: Access .history[index]
+        const day = marketData[item.ticker]?.history?.[index];
         if (day) {
           const val = day.adj_close * parseFloat(item.volume);
           totalValue += val;
@@ -27,19 +31,21 @@ const PerformanceChart = ({ marketData, portfolio, viewMode }) => {
       
       const activeBench = tickers.find(t => benchSymbols.includes(t));
       if (activeBench) {
-        dataPoint[activeBench] = parseFloat((marketData[activeBench][index]?.cum_return * 100).toFixed(2));
+        // NEW: Access .history[index]
+        const benchDay = marketData[activeBench]?.history?.[index];
+        dataPoint[activeBench] = benchDay ? parseFloat((benchDay.cum_return * 100).toFixed(2)) : 0;
       }
     } else {
       tickers.forEach(ticker => {
-        if (marketData[ticker][index]) {
-          dataPoint[ticker] = parseFloat((marketData[ticker][index].cum_return * 100).toFixed(2));
+        // NEW: Access .history[index]
+        const tickerDay = marketData[ticker]?.history?.[index];
+        if (tickerDay) {
+          dataPoint[ticker] = parseFloat((tickerDay.cum_return * 100).toFixed(2));
         }
       });
     }
     return dataPoint;
   });
-
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
   return (
     <div className="h-[400px] w-full mt-4">
@@ -55,23 +61,39 @@ const PerformanceChart = ({ marketData, portfolio, viewMode }) => {
           />
           <YAxis stroke="#4b5563" fontSize={11} tickFormatter={(v) => `${v}%`} />
           <Tooltip 
-            contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #1e293b' }}
-            formatter={(val) => [`${val}%`, ""]}
+            contentStyle={{ backgroundColor: '#09090b', border: '1px solid #27272a', borderRadius: '8px' }}
+            itemStyle={{ fontSize: '12px' }}
+            // Change this line:
+            formatter={(val, name) => [`${val}%`, name]} 
           />
-          <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+          {/* 2. ADD onClick to the Legend */}
+          <Legend 
+            iconType="circle" 
+            wrapperStyle={{ fontSize: '10px', paddingTop: '20px', textTransform: 'uppercase', cursor: 'pointer' }} 
+            onClick={(e) => onTickerClick(e.value)}
+          />
           
           {Object.keys(chartData[0] || {}).filter(k => k !== 'date').map((ticker, i) => {
             const isBench = benchSymbols.includes(ticker);
             const isPort = ticker === "My Portfolio";
+            
+            // 3. LOGIC FOR HIGHLIGHTING
+            // A line is highlighted if: nothing is selected OR it is the specific ticker selected
+            const isHighlighted = selectedTickers.length === 0 || selectedTickers.includes(ticker);
+            
             return (
               <Line
                 key={ticker}
                 type="monotone"
                 dataKey={ticker}
-                stroke={isPort ? '#8b5cf6' : isBench ? '#fbbf24' : COLORS[i % COLORS.length]}
-                strokeWidth={isPort || isBench ? 3 : 1.5}
+                // If not highlighted, stroke becomes a dark grey (#27272a)
+                stroke={isPort ? '#10b981' : isHighlighted ? colors[i % colors.length] : '#27272a'}
+                // If not highlighted, line becomes very thin and faint
+                strokeWidth={isHighlighted ? (isPort || isBench ? 3 : 2) : 1}
+                strokeOpacity={isHighlighted ? 1 : 0.15}
                 strokeDasharray={isBench ? "5 5" : "0"}
                 dot={false}
+                style={{ cursor: 'pointer', transition: 'all 0.3s ease' }}
               />
             );
           })}

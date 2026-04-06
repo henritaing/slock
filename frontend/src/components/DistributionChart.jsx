@@ -1,66 +1,70 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
-const DistributionChart = ({ marketData, portfolio }) => {
-  const COLORS = ['#f5f5f4', '#3b82f6', '#1e293b', '#64748b', '#94a3b8', '#334155'];
-
-  // Calculate Asset Totals
+const DistributionChart = ({ marketData, portfolio, colors }) => {
+  // 1. Calculate Asset Totals (Static Overview)
   const assetData = portfolio.map(item => {
-    const tickerData = marketData?.[item.ticker];
-    const hasData = Array.isArray(tickerData) && tickerData.length > 0;
-    const lastPrice = hasData ? tickerData[tickerData.length - 1].adj_close : 0;
+    const tickerInfo = marketData?.[item.ticker];
+    const history = tickerInfo?.history || []; 
+    // Prioritize last_price from the sync, fallback to history
+    const lastPrice = tickerInfo?.last_price || (history.length > 0 ? history[history.length - 1].adj_close : 0);
+    
     return {
       name: item.ticker,
-      value: parseFloat((parseFloat(item.volume) * lastPrice).toFixed(2))
+      value: parseFloat((item.volume * lastPrice).toFixed(2))
     };
   }).filter(item => item.value > 0);
 
-  // Calculate Sector Totals
+  // 2. Calculate Sector Totals (Static Overview)
   const sectorMap = {};
   portfolio.forEach(item => {
-    const tickerData = marketData?.[item.ticker];
-    if (Array.isArray(tickerData) && tickerData.length > 0) {
-      const lastPrice = tickerData[tickerData.length - 1].adj_close;
-      const sector = tickerData[0].sector || 'Other';
-      const value = parseFloat(item.volume) * lastPrice;
-      sectorMap[sector] = (sectorMap[sector] || 0) + value;
-    }
+    const tickerInfo = marketData?.[item.ticker];
+    const sector = tickerInfo?.sector || 'Other/ETF';
+    const history = tickerInfo?.history || [];
+    const lastPrice = tickerInfo?.last_price || (history.length > 0 ? history[history.length - 1].adj_close : 0);
+    const value = item.volume * lastPrice;
+    
+    sectorMap[sector] = (sectorMap[sector] || 0) + value;
   });
 
-  const sectorData = Object.entries(sectorMap).map(([name, value]) => ({
-    name,
-    value: parseFloat(value.toFixed(2))
-  })).sort((a, b) => b.value - a.value);
-
-  const totalValue = assetData.reduce((acc, curr) => acc + curr.value, 0);
+  const sectorData = Object.entries(sectorMap)
+    .map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }))
+    .sort((a, b) => b.value - a.value);
 
   const renderDonut = (data, title) => (
     <div className="flex flex-col items-center w-full">
-      <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-2 font-bold">{title}</p>
-      <div className="h-[240px] w-full">
+      <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-6 font-black">{title}</p>
+      <div className="h-[280px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
-              innerRadius={55}
-              outerRadius={75}
-              paddingAngle={4}
+              innerRadius={65}
+              outerRadius={85}
+              paddingAngle={5}
               dataKey="value"
               stroke="none"
+              isAnimationActive={true} // Keep it feeling smooth
             >
               {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Cell 
+                  key={`cell-${index}`} 
+                  // FIX: Use the global colors passed from App.jsx
+                  fill={colors[index % colors.length]} 
+                  className="outline-none" 
+                />
               ))}
             </Pie>
             <Tooltip 
-              formatter={(value) => {
-                const percentage = ((value / totalValue) * 100).toFixed(2);
-                return [`${value.toLocaleString()}€ (${percentage}%)`, "Allocation"];
-              }}
-              contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #1e293b', borderRadius: '8px' }}
-              itemStyle={{ color: '#f5f5f4', fontSize: '12px' }}
+              formatter={(value, name) => [`${value.toLocaleString()}€`, name]}
+              contentStyle={{ backgroundColor: '#09090b', border: '1px solid #27272a', borderRadius: '12px', fontSize: '12px' }}
+              itemStyle={{ color: '#10b981' }}
             />
-            <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+            <Legend 
+              verticalAlign="bottom" 
+              iconType="circle" 
+              wrapperStyle={{ fontSize: '10px', paddingTop: '20px', textTransform: 'uppercase' }} 
+            />
           </PieChart>
         </ResponsiveContainer>
       </div>
@@ -68,9 +72,9 @@ const DistributionChart = ({ marketData, portfolio }) => {
   );
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
-      {renderDonut(assetData, "By Asset")}
-      {renderDonut(sectorData, "By Sector")}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full py-4">
+      {renderDonut(assetData, "Asset Concentration")}
+      {renderDonut(sectorData, "Sector Exposure")}
     </div>
   );
 };
