@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Database, BarChart, ChevronDown, ChevronUp, Lock, Zap } from 'lucide-react';
 import 'katex/dist/katex.min.css';
-import { InlineMath, BlockMath } from 'react-katex';
+import { BlockMath } from 'react-katex';
+import slockLogo from './assets/slock_logo.png';
 
 const MathSection = ({ title, formula, explanation }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -33,10 +34,14 @@ const Methodology = ({ navigateTo }) => {
       {/* --- REPLICATED LANDING NAVBAR --- */}
       <nav className="flex items-center justify-between px-12 py-8 w-full border-b border-zinc-800/10">
         <div className="flex items-center gap-3 group cursor-pointer" onClick={() => navigateTo('landing')}>
-          <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 transition-transform group-hover:scale-110">
-             <span className="text-black font-black text-2xl">S</span>
+          <div className="w-10 h-10 bg-zinc-300 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 transition-transform group-hover:scale-110">
+            <img 
+              src={slockLogo} 
+              alt="Slock Logo" 
+              className="w-15 h-15 object-contain" 
+            />        
           </div>
-          <span className="text-2xl font-black tracking-tighter uppercase">Slock<span className="text-emerald-500">.</span></span>
+          <span className="text-2xl font-black tracking-tighter uppercase"><span className="text-emerald-500">Slock</span></span>
         </div>
 
         <div className="flex items-center gap-10">

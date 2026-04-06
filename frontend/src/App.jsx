@@ -14,6 +14,12 @@ import Methodology from './Methodology';
 import ShockSimulator from './components/ShockSimulator';
 import SectorComparison from './components/SectorPerformance';
 import RiskAnalytics from './components/RiskAnalytics';
+import Insights from './components/Insights';
+
+// Image imports
+import slockLogo from './assets/slock_logo.png'; 
+import heroImage from './assets/hero_image.png';
+
 
 const CollapsibleSection = ({ title, children, defaultOpen = true }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -191,12 +197,18 @@ const App = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <nav className="h-20 border-b border-zinc-800 bg-black/40 flex items-center px-8 justify-between">
           <div className="flex items-center gap-8">
-            <div onClick={() => navigateTo('landing')} className="flex items-center gap-2 cursor-pointer border-r border-zinc-800 pr-8">
-              <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center"><span className="text-black font-black text-lg">S</span></div>
-              <span className="text-lg font-black uppercase tracking-tighter">Slock</span>
+            <div 
+              onClick={() => navigateTo('landing')} 
+              className="flex items-center gap-3 cursor-pointer border-r border-zinc-800 pr-8"
+            >
+              <img 
+                src={slockLogo} 
+                alt="Slock Logo" 
+                className="w-15 h-15 object-contain" 
+              />
+              <span className="text-2xl font-black tracking-tighter uppercase"><span className="text-emerald-500">Slock</span></span>
             </div>
           </div>
-    
         </nav>
 
         <main className="flex-1 overflow-y-auto p-8">
