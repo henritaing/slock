@@ -87,42 +87,6 @@ const PortfolioHealth = ({ marketData, portfolio, stats, benchmark }) => {
           </ResponsiveContainer>
         </div>
       </div>
-
-      {/* --- CONDITIONAL: Beta & Alpha Cards --- */}
-      {hasBenchmark && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in zoom-in duration-500">
-          <div className="bg-zinc-900/40 border border-zinc-800 p-6 rounded-2xl">
-            <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-1">Portfolio Beta</p>
-            <p className="text-3xl font-mono font-bold text-emerald-500">
-              {stats?.beta?.toFixed(2) || "1.00"}
-            </p>
-            <div className="h-1 w-full bg-zinc-800 mt-4 rounded-full overflow-hidden">
-               <div 
-                 className="h-full bg-emerald-500 transition-all duration-1000" 
-                 style={{ width: `${Math.min((stats?.beta || 1) * 50, 100)}%` }}
-               />
-            </div>
-            <p className="text-[9px] text-zinc-400 mt-3 uppercase font-bold tracking-tighter">
-              {stats?.beta > 1.1 ? "⚡ High Volatility" : stats?.beta < 0.9 ? "🛡️ Defensive Bias" : "⚖️ Market Correlation"}
-            </p>
-          </div>
-
-          <div className="bg-zinc-900/40 border border-zinc-800 p-6 rounded-2xl">
-            <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-1">Alpha (Excess Return)</p>
-            <p className={`text-3xl font-mono font-bold ${stats?.alpha >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-              {stats?.alpha > 0 ? '+' : ''}{stats?.alpha?.toFixed(2)}%
-            </p>
-            <div className="flex gap-1 mt-4">
-              {[...Array(5)].map((_, i) => (
-                  <div key={i} className={`h-1 flex-1 rounded-full ${i < (stats?.alpha / 2) ? 'bg-emerald-500' : 'bg-zinc-800'}`} />
-              ))}
-            </div>
-            <p className="text-[9px] text-zinc-400 mt-3 uppercase font-bold tracking-tighter">
-              {stats?.alpha > 0 ? "🔥 Beating Benchmark" : "🧊 Trailing Benchmark"}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

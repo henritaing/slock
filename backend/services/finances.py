@@ -1,8 +1,21 @@
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from ..database import MarketCache
+
+def _get_cached_sector(db: Session, ticker: str) -> dict:
+    row = db.query(
+        MarketCache.sector, 
+        MarketCache.industry,
+        MarketCache.long_name
+    ).filter(
+        MarketCache.ticker == ticker,
+        MarketCache.sector != None,
+        MarketCache.sector != 'Unknown'
+    ).first()
+    return {"sector": row.sector, "industry": row.industry, "long_name": row.long_name} if row else None
 
 def get_historical_data(db: Session, tickers: list, period_months: int, refresh: bool = False):
     end_date = datetime.now()
@@ -42,31 +55,46 @@ def get_historical_data(db: Session, tickers: list, period_months: int, refresh:
             hist = yf_ticker.history(start=start_date, end=end_date)
             
             if not hist.empty:
-                info = yf_ticker.info
-                sector = info.get('sector', 'Unknown')
-                industry = info.get('industry', 'Unknown')
-                
+                cached_meta = _get_cached_sector(db, ticker)
+                if cached_meta:
+                    sector = cached_meta["sector"]
+                    industry = cached_meta["industry"]
+                    long_name = cached_meta["long_name"] or ticker
+                else:
+                    info = yf_ticker.info
+                    sector = info.get('sector', 'Unknown')
+                    industry = info.get('industry', 'Unknown')
+                    long_name = info.get('longName', ticker)
+
                 df = pd.DataFrame({
                     'date': hist.index.date,
-                    'adj_close': hist['Close'],
+                    'adj_close': hist['Close'].values,
                     'sector': sector,
-                    'industry': industry
+                    'industry': industry,
+                    'long_name': long_name   # ADD THIS
                 }).reset_index(drop=True)
 
-                # 3. Update Database (Sync)
-                for _, row in df.iterrows():
-                    entry = MarketCache(
-                        ticker=ticker,
-                        date=row['date'],
-                        adj_close=row['adj_close'],
-                        sector=row['sector'],
-                        industry=row['industry']
-                    )
-                    db.merge(entry)
-                
+                # Bulk upsert instead of row-by-row merge
+                rows = [
+                    {
+                        "ticker": ticker,
+                        "date": row["date"],
+                        "adj_close": row["adj_close"],
+                        "sector": row["sector"],
+                        "industry": row["industry"],
+                        "long_name": row["long_name"]   # ADD THIS
+                    }
+                    for _, row in df.iterrows()
+                ]
+                stmt = sqlite_insert(MarketCache).values(rows)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=["ticker", "date"],
+                    set_={"adj_close": stmt.excluded.adj_close}
+                )
+                db.execute(stmt)
                 db.commit()
 
-        if df is not None:
+        if df is not None and not df.empty:
             result_data[ticker] = df
 
     return result_data

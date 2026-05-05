@@ -14,11 +14,8 @@ import ControlPanel from './components/ControlPanel';
 import DistributionChart from './components/DistributionChart';
 import PerformanceChart from './components/PerformanceChart';
 import PortfolioHealth from './components/PortfolioHealth';
-import SlothScore from './components/SlothScore'; 
-import ShockSimulator from './components/ShockSimulator';
 import SectorComparison from './components/SectorPerformance';
 import RiskAnalytics from './components/RiskAnalytics';
-import Insights from './components/Insights';
 import AssetSearchCenter from './components/AssetSearchCenter';
 import LandingPage from './LandingPage';
 import Methodology from './Methodology';
@@ -26,7 +23,6 @@ import Methodology from './Methodology';
 const App = () => {
   // --- NAVIGATION & UI STATE ---
   const [view, setView] = useState('landing'); 
-  const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -37,7 +33,7 @@ const App = () => {
   });
   const [marketData, setMarketData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [globalStats, setGlobalStats] = useState({ beta: 1.0, alpha: 0.0 });
+
   const [editingAsset, setEditingAsset] = useState(null);
   
   // --- FILTER & ANALYSIS STATE ---
@@ -93,7 +89,7 @@ const App = () => {
         refresh: !!forceRefresh
       });
       setMarketData(response.data.marketData);
-      setGlobalStats(response.data.stats);
+ 
       localStorage.setItem('slock_portfolio', JSON.stringify(portfolio));
     } catch (error) {
       console.error("Sync failed:", error);
@@ -153,13 +149,13 @@ const App = () => {
                   onSync={handleSync}
                 />
 
-                {activeTab === 'dashboard' ? (
+              
                   <div className="space-y-12">
                     {/* Allocation Section */}
                     <section className="grid grid-cols-1 xl:grid-cols-4 gap-8">
                       <div className="xl:col-span-3 space-y-6">
                         <DistributionChart marketData={marketData} portfolio={displayPortfolio} colors={CHART_COLORS} />
-                        <SectorComparison marketData={marketData} portfolio={displayPortfolio} benchmark={benchmark} colors={CHART_COLORS} />
+                        
                       </div>
                       <div className="space-y-6">
                          <div className="bg-emerald-600/10 border border-emerald-500/20 p-6 rounded-2xl">
@@ -179,12 +175,13 @@ const App = () => {
                               </span>
                             </div>
                           </div>
-                         <SlothScore portfolio={displayPortfolio} />
                       </div>
                     </section>
 
+                    <SectorComparison marketData={marketData} portfolio={displayPortfolio} benchmark={benchmark} colors={CHART_COLORS} />
+
                     {/* Health & Analytics */}
-                    <PortfolioHealth marketData={marketData} portfolio={displayPortfolio} stats={globalStats} benchmark={benchmark} />
+                    <PortfolioHealth marketData={marketData} portfolio={displayPortfolio} benchmark={benchmark} />
                     
                     {/* History */}
                     <PerformanceChart 
@@ -200,9 +197,7 @@ const App = () => {
                       prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]
                     )}/>
                   </div>
-                ) : (
-                  <Insights marketData={marketData} portfolio={displayPortfolio} benchmark={benchmark} />
-                )}
+                
               </div>
             ) : (
               <div className="h-[600px] flex flex-col items-center justify-center opacity-50">
