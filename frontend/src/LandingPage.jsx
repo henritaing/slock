@@ -21,7 +21,6 @@ const LandingPage = ({ onEnterDashboard, navigateTo }) => {
           </div>
           <span className="text-2xl font-black tracking-tighter uppercase"><span className="text-emerald-500">Slock</span></span>
         </div>
-
         <div className="flex items-center gap-10">
           <div className="hidden md:flex gap-8 text-sm font-bold uppercase tracking-widest text-zinc-500">
             <button onClick={() => navigateTo('methodology')} className="hover:text-emerald-400 transition-colors">Methodology</button>
@@ -58,10 +57,9 @@ const LandingPage = ({ onEnterDashboard, navigateTo }) => {
         {/* Hero Image Placeholder (3D Sloth) */}
         <div className="w-full md:w-1/2 h-[600px] relative flex items-center justify-center overflow-hidden">
             <img 
-                             src={heroImage} 
-                             alt="Hero Image" 
-                            
-                           />
+              src={heroImage} 
+              alt="Hero Image" 
+            />
         </div>
       </header>
 

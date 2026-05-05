@@ -49,8 +49,12 @@ const PerformanceChart = ({ marketData, portfolio, viewMode, colors, selectedTic
 
   return (
     <div className="h-[400px] w-full mt-4">
+      <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-6 font-black text-center">
+          Cumulative Monthly Returns (%)
+        </p>
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData}>
+        
+        <LineChart data={chartData}> 
           <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
           <XAxis 
             dataKey="date" 
@@ -73,30 +77,38 @@ const PerformanceChart = ({ marketData, portfolio, viewMode, colors, selectedTic
             onClick={(e) => onTickerClick(e.value)}
           />
           
-          {Object.keys(chartData[0] || {}).filter(k => k !== 'date').map((ticker, i) => {
-            const isBench = benchSymbols.includes(ticker);
-            const isPort = ticker === "My Portfolio";
-            
-            // 3. LOGIC FOR HIGHLIGHTING
-            // A line is highlighted if: nothing is selected OR it is the specific ticker selected
-            const isHighlighted = selectedTickers.length === 0 || selectedTickers.includes(ticker);
-            
-            return (
-              <Line
-                key={ticker}
-                type="monotone"
-                dataKey={ticker}
-                // If not highlighted, stroke becomes a dark grey (#27272a)
-                stroke={isPort ? '#10b981' : isHighlighted ? colors[i % colors.length] : '#27272a'}
-                // If not highlighted, line becomes very thin and faint
-                strokeWidth={isHighlighted ? (isPort || isBench ? 3 : 2) : 1}
-                strokeOpacity={isHighlighted ? 1 : 0.15}
-                strokeDasharray={isBench ? "5 5" : "0"}
-                dot={false}
-                style={{ cursor: 'pointer', transition: 'all 0.3s ease' }}
-              />
-            );
-          })}
+          {chartData && chartData.length > 0 && 
+            Object.keys(chartData[0])
+              .filter(k => k !== 'date')
+              .map((ticker, i) => {
+                const isBench = benchSymbols.includes(ticker);
+                const isPort = ticker === "My Portfolio";
+                
+                // SAFETY: Use optional chaining for selectedTickers
+                const isHighlighted = !selectedTickers || selectedTickers.length === 0 || selectedTickers.includes(ticker);
+                
+                // Determine the base color
+                let strokeColor = (colors && colors.length > 0) ? colors[i % colors.length] : '#888888';
+                if (isPort) strokeColor = '#10b981';
+                
+                return (
+                  <Line
+                    key={ticker}
+                    type="monotone"
+                    dataKey={ticker}
+                    // Highlight logic
+                    stroke={isHighlighted ? strokeColor : '#27272a'}
+                    strokeWidth={isHighlighted ? (isPort || isBench ? 3 : 2) : 1}
+                    strokeOpacity={isHighlighted ? 1 : 0.15}
+                    strokeDasharray={isBench ? "5 5" : "0"}
+                    dot={false}
+                    style={{ cursor: 'pointer', transition: 'all 0.3s ease' }}
+                    // Performance boost: disable animation for multi-line charts
+                    isAnimationActive={false}
+                  />
+                );
+              })
+          }
         </LineChart>
       </ResponsiveContainer>
     </div>

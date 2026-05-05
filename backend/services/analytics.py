@@ -11,21 +11,14 @@ def calculate_metrics(df: pd.DataFrame):
     # ensures we don't send incomplete data to the frontend.
     df['volatility'] = df['returns'].rolling(window=21, min_periods=5).std() * np.sqrt(252)
     
-    # 3. RSI (14-day)
-    delta = df['adj_close'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=14, min_periods=5).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=14, min_periods=5).mean()
-    rs = gain / loss
-    df['rsi'] = 100 - (100 / (1 + rs))
-
     # 4. Cumulative Returns
     # We fillna(0) for the product math so the first valid day works
     df['cum_return'] = (1 + df['returns'].fillna(0)).cumprod() - 1
 
     # --- CLEANUP ---
-    # Drop rows where we don't have enough data for Volatility or RSI
+    
     # This removes the "0 line" at the start of charts.
-    df = df.dropna(subset=['volatility', 'rsi'])
+    df = df.dropna(subset=['volatility'])
 
     # 5. Sanitization for JSON
     df = df.replace([np.inf, -np.inf], np.nan)

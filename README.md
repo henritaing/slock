@@ -26,13 +26,18 @@ A full-stack financial dashboard for tracking stock performance, calculating ris
 - **`LandingPage.jsx`**
 - **`Methodology.jsx`**: Financial & Mathematical explanations of metrics
 - **`components/PortfolioInput.jsx`**: Side-slidable page to input portfolio stocks.
-- **`components/RiskAnalytics.jsx`**: Visualizes Volatility and RSI trends across the selected horizon. (Postponed)
+- **`components/layout/DashboardHeader.jsx`**: Dashboard Header to avoid reloading it
+- **`components/layout/Sidebar.jsx`**: Sidebar to simplify App.jsx
+- **`components/ControlPanel.jsx`**: To control filters on the dashboard
+- **`components/AssetSearchCenter.jsx`**: Handle the search of asset for input
+- **`components/RiskAnalytics.jsx`**: Visualizes Volatility and RSI trends across the selected horizon.
 - **`components/PortfolioHealth.jsx`**: Displays core Quant stats (Alpha/Beta) and P&L breakdowns.
 - **`components/PerformanceChart.jsx`**: Displays monthly performance.
 - **`components/DistributionChart.jsx`**: Displays portfolio distribution.
 - **`components/SectorPerformance.jsx`**: Displays index distribution compared to portfolio.
 - **`components/SlothScore.jsx`**: Displays Sloth Metrics.
 - **`components/ShockSimulator.jsx`**: Simple stress test for your portfolio compared to the market index chosen.
+
 
 ## Data Schemas
 
@@ -55,20 +60,3 @@ A full-stack financial dashboard for tracking stock performance, calculating ris
 - Circular Structure Error: If handleSync fails, ensure the function call is wrapped in an anonymous arrow function () => handleSync() to prevent passing the React Click Event to Axios.
 - Data Horizon: If "Max" shows limited data, use the Refresh (Sync) button to force the backend to fetch full history from Yahoo Finance and overwrite the local cache.
 - Rolling Gaps: Indicators use min_periods=5 to show data as early as possible while maintaining statistical integrity.
-
-## 4. Improved Initial Prompt (The "Quant Pro" Prompt)
-
-If you were starting this project today or explaining it to a senior developer, use this prompt. It provides much clearer constraints and "Why" behind the logic:
-
-> "Act as a Full-Stack Financial Engineer. Build a Quantitative Portfolio Dashboard called 'ADVIZ.' using FastAPI and React. 
->
-> **Core Requirements:**
-> 1. **Data Engine:** Implement a Python backend that fetches adjusted close prices via `yfinance`. Use SQLAlchemy to cache this data in SQLite. The cache must be 'Horizon-Aware': if a user requests 24 months but the cache only has 12, it must fetch the missing history.
-> 2. **Analytics Layer:** Use Pandas to calculate:
->    - Annualized Rolling Volatility (21-day window).
->    - RSI (14-day window).
->    - Portfolio Beta and Alpha relative to a user-selected benchmark (S&P 500, etc.).
->    - Ensure 'Smart Slicing'—remove lead-in rows where rolling calculations are NaN so the frontend charts start cleanly.
-> 3. **Frontend Architecture:** Use Vite/React with Tailwind CSS. Create a sidebar for portfolio CRUD (Ticker, Buy Price, Volume). Use Recharts for visualization. 
-> 4. **State Management:** Implement a robust sync function that handles 'Force Refresh' (bypassing cache) and sanitizes input to prevent JSON serialization errors (specifically circular structures from React Events).
-> 5. **Design Language:** Dark mode, 'Bloomberg-Lite' aesthetic, using Monospaced fonts for financial figures and Lucide icons."
