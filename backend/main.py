@@ -7,8 +7,9 @@ from .services.analytics import calculate_metrics
 from pydantic import BaseModel
 from typing import List, Optional
 import pandas as pd
-from .database import SessionLocal, init_db, JournalEntry, WatchlistItem
-from datetime import datetime, timezone
+from .database import SessionLocal, init_db, JournalEntry, WatchlistItem, EarningsCache, Base
+import yfinance as yf
+from datetime import datetime, timezone, date
 
 init_db()
 app = FastAPI()
@@ -50,8 +51,6 @@ class WatchlistItemCreate(BaseModel):
 class WatchlistItemUpdate(BaseModel):
     entry_target: Optional[float] = None
     thesis: Optional[str] = None
-
-
 
 def get_db():
     db = SessionLocal()
@@ -126,3 +125,88 @@ def delete_journal_entry(entry_id: str, db: Session = Depends(get_db)):
     db.delete(entry)
     db.commit()
     return {"deleted": entry_id}    
+
+
+@app.get("/api/earnings")
+def get_earnings(tickers: str, db: Session = Depends(get_db)):
+    ticker_list = [t.strip() for t in tickers.split(",")]
+    results = {}
+
+    for ticker in ticker_list:
+        try:
+            cal = yf.Ticker(ticker).calendar
+            if not cal:
+                continue
+
+            db.query(EarningsCache).filter(EarningsCache.ticker == ticker).delete()
+
+            events = []
+            event_map = {
+                "Earnings Date": "earnings",
+                "Ex-Dividend Date": "exdividend",
+                "Dividend Date": "dividend"
+            }
+
+            for label, event_type in event_map.items():
+                val = cal.get(label)
+                if val is None:
+                    continue
+                dates = val if isinstance(val, list) else [val]
+                for d in dates:
+                    event_date = d if isinstance(d, date) else d.date()
+                    db.add(EarningsCache(
+                        ticker=ticker,
+                        event_type=event_type,
+                        event_date=event_date
+                    ))
+                    events.append({
+                        "event_type": event_type,
+                        "event_date": str(event_date)
+                    })
+
+            db.commit()
+            results[ticker] = events
+
+        except Exception as e:
+            print(f"Earnings fetch failed for {ticker}: {e}")
+            continue
+
+    return results
+
+@app.get("/api/debug/calendar/{ticker}")
+def debug_calendar(ticker: str):
+    cal = yf.Ticker(ticker).calendar
+    return {"type": str(type(cal)), "data": str(cal)}
+
+@app.post("/api/watchlist")
+def create_watchlist_item(item: WatchlistItemCreate, db: Session = Depends(get_db)):
+    db_item = WatchlistItem(**item.model_dump())
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
+
+@app.get("/api/watchlist")
+def get_watchlist(db: Session = Depends(get_db)):
+    return db.query(WatchlistItem).order_by(WatchlistItem.created_at.desc()).all()
+
+@app.put("/api/watchlist/{item_id}")
+def update_watchlist_item(item_id: str, update: WatchlistItemUpdate, db: Session = Depends(get_db)):
+    item = db.query(WatchlistItem).filter(WatchlistItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    for k, v in update.model_dump(exclude_none=True).items():
+        setattr(item, k, v)
+    item.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(item)
+    return item
+
+@app.delete("/api/watchlist/{item_id}")
+def delete_watchlist_item(item_id: str, db: Session = Depends(get_db)):
+    item = db.query(WatchlistItem).filter(WatchlistItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    db.delete(item)
+    db.commit()
+    return {"deleted": item_id}

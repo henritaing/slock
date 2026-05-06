@@ -53,6 +53,14 @@ class WatchlistItem(Base):
     created_at = Column(DateTime(timezone=True), default=utcnow)
     updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
+class EarningsCache(Base):
+    __tablename__ = "earnings_cache"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    ticker = Column(String, index=True)
+    event_type = Column(String)          # "earnings", "exdividend", "dividend"
+    event_date = Column(Date, nullable=True)
+    fetched_at = Column(DateTime(timezone=True), default=utcnow)
+
 
 def init_db():
     Base.metadata.create_all(bind=engine)

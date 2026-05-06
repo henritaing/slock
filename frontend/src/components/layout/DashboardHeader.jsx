@@ -1,5 +1,6 @@
 import React from 'react';
 import slockLogo from '../../assets/slock_logo.png';
+import { BookOpen } from 'lucide-react';
 
 const DashboardHeader = ({ onNavigate }) => {
   return (
@@ -20,9 +21,18 @@ const DashboardHeader = ({ onNavigate }) => {
         </div>
       </div>
       
-      <div className="flex items-center gap-4">
-        <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Market Live</span>
+      <div className="flex items-center gap-6">
+        <button
+          onClick={() => onNavigate('journal')}
+          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-emerald-500 transition-colors"
+        >
+          <BookOpen size={14} />
+          Journal
+        </button>
+        <div className="flex items-center gap-4">
+          <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Market Live</span>
+        </div>
       </div>
     </nav>
   );

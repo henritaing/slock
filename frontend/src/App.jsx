@@ -19,6 +19,7 @@ import RiskAnalytics from './components/RiskAnalytics';
 import AssetSearchCenter from './components/AssetSearchCenter';
 import LandingPage from './LandingPage';
 import Methodology from './Methodology';
+import Journal from './Journal';
 
 const App = () => {
   // --- NAVIGATION & UI STATE ---
@@ -114,6 +115,7 @@ const App = () => {
         navigateTo={navigateTo} 
         onEnterDashboard={() => navigateTo('dashboard')} 
       />;
+  if (view === 'journal') return <Journal portfolio={portfolio} navigateTo={navigateTo} />;
 
   return (
     <div className="flex h-screen bg-[#09090b] text-zinc-100 overflow-hidden font-sans">
