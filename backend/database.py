@@ -37,10 +37,11 @@ class JournalEntry(Base):
     lot_id = Column(String, index=True)      # matches portfolio[].id from frontend
     ticker = Column(String, index=True)
     bought_at = Column(Float)                # price at purchase
+    volume = Column(Float, nullable=True)   
     target_price = Column(Float, nullable=True)
-    target_date = Column(String, nullable=True)  # "YYYY-MM" is fine
-    reason = Column(Text, nullable=True)     # why I bought
-    notes = Column(Text, nullable=True)      # ongoing notes
+    target_date = Column(String, nullable=True)  
+    reason = Column(Text, nullable=True)     
+    notes = Column(Text, nullable=True)      
     created_at = Column(DateTime(timezone=True), default=utcnow)
     updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
     

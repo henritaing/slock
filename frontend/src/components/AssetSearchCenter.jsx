@@ -1,10 +1,11 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Search, X, MousePointer2, ArrowRight, ZoomIn, RotateCcw } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Search, X, ArrowRight, ZoomIn, RotateCcw } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, YAxis, Tooltip, XAxis, CartesianGrid, ReferenceArea, ReferenceLine } from 'recharts';
 import { TICKER_MAP } from '../constants';
 import axios from 'axios';
 
 const AssetSearchCenter = ({ onConfirm, onCancel, initialData }) => {
+  const debounceRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [previewData, setPreviewData] = useState([]);
 
@@ -16,46 +17,30 @@ const AssetSearchCenter = ({ onConfirm, onCancel, initialData }) => {
     volume: initialData?.volume || 10
   });
 
-  useEffect(() => {
-    if (initialData?.ticker) {
-      handleSearch(initialData.ticker);
-    }
-  }, [initialData]);
-  
-  // Zoom States
   const [zoomData, setZoomData] = useState({ refAreaLeft: '', refAreaRight: '', left: 'dataMin', right: 'dataMax' });
-
-  const handlePointClick = (data) => {
-    if (data && data.payload) {
-      const { date, adj_close } = data.payload;
-      setSelection(prev => ({ ...prev, date, price: adj_close }));
-      console.log("Point Selected:", date, adj_close);
-    }
-  };
 
   const handleSearch = async (ticker) => {
     if (!ticker) return;
     setLoading(true);
-    // Reset selection and zoom when searching a new asset
     setSelection({ ticker: ticker, name: TICKER_MAP[ticker], price: 0, date: '', volume: 10 });
     setZoomData({ refAreaLeft: '', refAreaRight: '', left: 'dataMin', right: 'dataMax' });
 
     try {
-      const res = await axios.post('http://127.0.0.1:8000/api/metrics', { 
-        tickers: [ticker],
-        period: "12",
-        refresh: false
-      });
-      
-      const history = res.data.marketData[ticker]?.history || [];
-      setPreviewData(history);
+      const res = await axios.get(`http://127.0.0.1:8000/api/preview/${ticker}`);
+      setPreviewData(res.data.history || []);
     } catch (e) {
-      console.error("Search failed", e.response?.data); 
+      console.error("Search failed", e.response?.data);
       setPreviewData([]);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (initialData?.ticker) {
+      handleSearch(initialData.ticker);
+    }
+  }, [initialData?.ticker]);
 
   const zoom = () => {
     let { refAreaLeft, refAreaRight } = zoomData;
@@ -63,7 +48,9 @@ const AssetSearchCenter = ({ onConfirm, onCancel, initialData }) => {
       setZoomData(prev => ({ ...prev, refAreaLeft: '', refAreaRight: '' }));
       return;
     }
-    if (refAreaLeft > refAreaRight) [refAreaLeft, refAreaRight] = [refAreaRight, refAreaLeft];
+    if (new Date(refAreaLeft) > new Date(refAreaRight)) {
+      [refAreaLeft, refAreaRight] = [refAreaRight, refAreaLeft];
+    }
     setZoomData(prev => ({ ...prev, refAreaLeft: '', refAreaRight: '', left: refAreaLeft, right: refAreaRight }));
   };
 
@@ -79,7 +66,7 @@ const AssetSearchCenter = ({ onConfirm, onCancel, initialData }) => {
       <button onClick={onCancel} className="absolute top-8 right-12 text-zinc-500 hover:text-white transition-colors z-[110]">
         <X size={32} strokeWidth={1} />
       </button>
-    
+
       <div className="max-w-6xl mx-auto w-full flex-1 flex flex-col min-h-0">
         <div className="text-center mb-8">
           <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500 mb-4">Market Discovery</h2>
@@ -92,12 +79,15 @@ const AssetSearchCenter = ({ onConfirm, onCancel, initialData }) => {
               className="w-full bg-transparent border-b-2 border-zinc-800 py-4 pl-14 pr-4 text-3xl font-mono focus:border-emerald-500 outline-none uppercase transition-all text-white"
               onChange={(e) => {
                 const val = e.target.value.toUpperCase();
-                if (val.includes(" - ")) {
-                  const tickerOnly = val.split(" - ")[1].trim();
-                  handleSearch(tickerOnly);
-                } else if (TICKER_MAP[val]) {
-                  handleSearch(val.trim());
-                }
+                if (debounceRef.current) clearTimeout(debounceRef.current);
+                debounceRef.current = setTimeout(() => {
+                  if (val.includes(" - ")) {
+                    const tickerOnly = val.split(" - ")[1].trim();
+                    handleSearch(tickerOnly);
+                  } else if (TICKER_MAP[val]) {
+                    handleSearch(val.trim());
+                  }
+                }, 300);
               }}
             />
             <datalist id="search-tickers">
@@ -124,7 +114,6 @@ const AssetSearchCenter = ({ onConfirm, onCancel, initialData }) => {
               </div>
 
               <div className="flex-1 cursor-crosshair select-none relative">
-                {/* LOCKED SELECTION HUD */}
                 {selection.date && (
                   <div className="absolute top-0 left-0 z-[50] bg-emerald-600 text-white px-4 py-2 rounded-xl shadow-2xl animate-in zoom-in-95 duration-200 flex items-center gap-4">
                     <div>
@@ -134,7 +123,7 @@ const AssetSearchCenter = ({ onConfirm, onCancel, initialData }) => {
                     <div className="w-px h-8 bg-white/20" />
                     <div>
                       <p className="text-[8px] font-black uppercase opacity-70">Price</p>
-                      <p className="text-sm font-mono font-bold">{selection.price.toFixed(2)}€</p>
+                      <p className="text-sm font-mono font-bold">{(selection.price || 0).toFixed(2)}€</p>
                     </div>
                     <button 
                       onClick={(e) => { e.stopPropagation(); setSelection(prev => ({...prev, date: '', price: 0})); }}
@@ -161,7 +150,6 @@ const AssetSearchCenter = ({ onConfirm, onCancel, initialData }) => {
                     <CartesianGrid strokeDasharray="3 3" stroke="#18181b" vertical={false} />
                     <XAxis dataKey="date" hide domain={[zoomData.left, zoomData.right]} />
                     <YAxis domain={['auto', 'auto']} hide />
-                    
                     <Tooltip 
                       pointerEvents="none"
                       wrapperStyle={{ zIndex: 40 }}
@@ -180,11 +168,9 @@ const AssetSearchCenter = ({ onConfirm, onCancel, initialData }) => {
                         return null;
                       }}
                     />
-
                     {selection.date && (
                       <ReferenceLine x={selection.date} stroke="#10b981" strokeWidth={2} strokeDasharray="5 5" />
                     )}
-
                     <Line 
                       type="monotone" 
                       dataKey="adj_close" 
@@ -192,15 +178,8 @@ const AssetSearchCenter = ({ onConfirm, onCancel, initialData }) => {
                       strokeWidth={3} 
                       dot={false}
                       isAnimationActive={false}
-                      activeDot={{ 
-                        r: 6, 
-                        fill: '#10b981', 
-                        stroke: '#fff', 
-                        strokeWidth: 2,
-                        onClick: (e, payload) => handlePointClick(payload) 
-                      }} 
+                      activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }} 
                     />
-                    
                     {zoomData.refAreaLeft && zoomData.refAreaRight && (
                       <ReferenceArea x1={zoomData.refAreaLeft} x2={zoomData.refAreaRight} strokeOpacity={0.3} fill="#10b981" fillOpacity={0.1} />
                     )}
@@ -232,7 +211,7 @@ const AssetSearchCenter = ({ onConfirm, onCancel, initialData }) => {
               className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-400 transition-all"
             />
           </div>
-          
+
           <button 
             disabled={!selection.date}
             onClick={() => onConfirm(selection)}

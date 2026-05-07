@@ -61,15 +61,9 @@ const ControlPanel = ({
         <button 
           onClick={() => onSync(true)} 
           className="p-2.5 bg-zinc-800 text-zinc-400 rounded-xl hover:text-white hover:bg-zinc-700 transition-all active:scale-90"
-          title="Force Data Refresh"
+          title="Force Data Refresh (Bypass Cache)"
         >
           <RefreshCw size={16} />
-        </button>
-        <button 
-          onClick={() => onSync(false)} 
-          className="bg-[#F5F2ED] text-black px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg active:scale-95"
-        >
-          Update Analysis
         </button>
       </div>
     </div>

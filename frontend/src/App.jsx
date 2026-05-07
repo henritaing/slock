@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { LayoutDashboard, RefreshCw } from 'lucide-react';
 
@@ -99,10 +99,22 @@ const App = () => {
     }
   }, [displayPortfolio, benchmark, period, portfolio]);
 
-  // Initial Sync
-  useEffect(() => {
-    if (portfolio.length > 0 && !marketData) handleSync();
-  }, [portfolio.length]);
+  // Add a ref to track the first render
+const isFirstRender = useRef(true);
+
+useEffect(() => {
+  if (isFirstRender.current) {
+    isFirstRender.current = false;
+    return;
+  }
+  if (displayPortfolio.length === 0) return;
+
+  const timeout = setTimeout(() => {
+    handleSync(false);
+  }, 500);
+
+  return () => clearTimeout(timeout);
+}, [benchmark, period]);
 
   // --- NAVIGATION HELPERS ---
   const navigateTo = (newView) => { window.scrollTo(0, 0); setView(newView); };
@@ -139,7 +151,7 @@ const App = () => {
             {loading ? (
               <div className="h-[600px] flex flex-col items-center justify-center gap-4">
                 <RefreshCw className="animate-spin text-emerald-500" size={48} />
-                <p className="text-emerald-500 text-xs tracking-widest uppercase">Analyzing Alpha...</p>
+                <p className="text-emerald-500 text-xs tracking-widest uppercase">Analyzing ...</p>
               </div>
             ) : marketData ? (
               <div className="space-y-8 animate-in fade-in duration-500">

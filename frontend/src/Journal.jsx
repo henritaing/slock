@@ -1,6 +1,4 @@
-import React from 'react';
-
-const { useState, useEffect, useCallback } = React;
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 const API = 'http://127.0.0.1:8000/api';
 
@@ -33,13 +31,13 @@ const JournalCard = ({ entry, onSave, onDelete }) => {
   });
 
   const handleSave = async () => {
+    setEditing(false);
     await fetch(`${API}/journal/${entry.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form)
     });
     onSave();
-    setEditing(false);
   };
 
   return (
@@ -47,7 +45,11 @@ const JournalCard = ({ entry, onSave, onDelete }) => {
       <div className="flex items-start justify-between">
         <div>
           <p className="text-base font-black text-zinc-100">{entry.ticker}</p>
-          <p className="text-xs text-zinc-500">{fmt(entry.created_at)} · Bought at <span className="text-emerald-400 font-mono">{entry.bought_at?.toFixed(2)}€</span></p>
+          <p className="text-xs text-zinc-500">
+            {fmt(entry.created_at)} · 
+            <span className="text-zinc-300 font-mono"> {entry.volume || 0}</span> shares @ 
+            <span className="text-emerald-400 font-mono"> {entry.bought_at?.toFixed(2)}€</span>
+          </p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setEditing(!editing)} className="text-[10px] font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 px-3 py-1 border border-emerald-500/20 rounded-lg">
@@ -61,31 +63,20 @@ const JournalCard = ({ entry, onSave, onDelete }) => {
 
       {editing ? (
         <div className="space-y-3">
-          <textarea
-            rows={3}
-            placeholder="Why did you buy this?"
-            value={form.reason}
+          <textarea rows={3} placeholder="Why did you buy this?" value={form.reason}
             onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
             className="w-full bg-black border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-200 resize-none outline-none focus:border-emerald-500/50"
           />
-          <textarea
-            rows={2}
-            placeholder="Ongoing notes..."
-            value={form.notes}
+          <textarea rows={2} placeholder="Ongoing notes..." value={form.notes}
             onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
             className="w-full bg-black border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-200 resize-none outline-none focus:border-emerald-500/50"
           />
           <div className="flex gap-3">
-            <input
-              type="number"
-              placeholder="Target price (€)"
-              value={form.target_price}
+            <input type="number" placeholder="Target price (€)" value={form.target_price}
               onChange={e => setForm(f => ({ ...f, target_price: e.target.value }))}
               className="flex-1 bg-black border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-200 outline-none focus:border-emerald-500/50"
             />
-            <input
-              type="month"
-              value={form.target_date}
+            <input type="month" value={form.target_date}
               onChange={e => setForm(f => ({ ...f, target_date: e.target.value }))}
               className="flex-1 bg-black border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-200 outline-none focus:border-emerald-500/50"
             />
@@ -119,13 +110,13 @@ const WatchlistCard = ({ item, onSave, onDelete }) => {
   });
 
   const handleSave = async () => {
-    await fetch(`${API}/watchlist/${item.id}`, {
+    setEditing(false);
+    await fetch(`${API}/watchlist/${item.id}`, {  // FIXED: was /journal/${entry.id}
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form)
     });
     onSave();
-    setEditing(false);
   };
 
   return (
@@ -172,70 +163,84 @@ export default function Journal({ portfolio = [], navigateTo }) {
   const [newWatch, setNewWatch] = useState({ ticker: '', entry_target: '', thesis: '' });
   const [loading, setLoading] = useState(true);
 
-  const tickers = [...new Set(portfolio.map(p => p.ticker))];
+  const tickers = useMemo(
+    () => [...new Set(portfolio.map(p => p.ticker))],
+    [portfolio]
+  );
+  const tickersKey = tickers.join(',');
 
-  const fetchAll = useCallback(async () => {
-    setLoading(true);  
+  const fetchAll = useCallback(async (showLoader = true) => {
+    if (showLoader) setLoading(true);
 
     try {
       const [j, w] = await Promise.all([
         fetch(`${API}/journal`).then(r => r.json()),
         fetch(`${API}/watchlist`).then(r => r.json()),
       ]);
-      setEntries(j);
-      setWatchlist(w);
+      setEntries(Array.isArray(j) ? j : []);
+      setWatchlist(Array.isArray(w) ? w : []);
 
-      if (tickers.length > 0) {
+      if (tickersKey) {
         const cutoff = new Date();
         cutoff.setMonth(cutoff.getMonth() - 6);
         cutoff.setHours(0, 0, 0, 0);
-        const e = await fetch(`${API}/earnings?tickers=${tickers.join(',')}`).then(r => r.json());
-        const flat = Object.entries(e).flatMap(([ticker, events]) =>
-          events.map(ev => ({ ...ev, ticker }))
+
+        const e = await fetch(`${API}/earnings?tickers=${tickersKey}`).then(r => r.json());
+        const flat = Object.entries(e || {}).flatMap(([ticker, events]) =>
+          (events || []).map(ev => ({ ...ev, ticker }))
         ).filter(ev => new Date(ev.event_date) >= cutoff)
           .sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
 
-        setEarnings(flat);   
+        setEarnings(flat);
+      } else {
+        setEarnings([]);
       }
-    } catch(err) {
+    } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [tickers.join(',')]);
+  }, [tickersKey]);
 
-  // Auto-create journal entries for lots that don't have one yet
   const syncLotEntries = useCallback(async (currentEntries) => {
     const existingLotIds = new Set(currentEntries.map(e => e.lot_id));
     const missing = portfolio.filter(lot => !existingLotIds.has(String(lot.id)));
-    for (const lot of missing) {
-      await fetch(`${API}/journal`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lot_id: String(lot.id),
-          ticker: lot.ticker.toUpperCase(),
-          bought_at: parseFloat(lot.buy_price) || 0,
+    
+    if (missing.length === 0) return;
+
+    await Promise.all(
+      missing.map(lot =>
+        fetch(`${API}/journal`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lot_id: String(lot.id),
+            ticker: lot.ticker.toUpperCase(),
+            bought_at: parseFloat(lot.buy_price) || 0,
+            volume: parseFloat(lot.volume) || 0,
+          })
         })
-      });
-    }
-    if (missing.length > 0) fetchAll();
+      )
+    );
+    fetchAll(false);
   }, [portfolio, fetchAll]);
 
   useEffect(() => {
     fetchAll().then(() => {
-      fetch(`${API}/journal`).then(r => r.json()).then(j => syncLotEntries(j));
+      if (portfolio.length > 0) {
+        fetch(`${API}/journal`).then(r => r.json()).then(j => syncLotEntries(j));
+      }
     });
-  }, []);
+  }, [tickersKey]);
 
   const deleteEntry = async (id) => {
     await fetch(`${API}/journal/${id}`, { method: 'DELETE' });
-    fetchAll();
+    fetchAll(false);
   };
 
   const deleteWatchlist = async (id) => {
     await fetch(`${API}/watchlist/${id}`, { method: 'DELETE' });
-    fetchAll();
+    fetchAll(false);
   };
 
   const addWatchlist = async () => {
@@ -246,7 +251,7 @@ export default function Journal({ portfolio = [], navigateTo }) {
       body: JSON.stringify({ ...newWatch, ticker: newWatch.ticker.toUpperCase() })
     });
     setNewWatch({ ticker: '', entry_target: '', thesis: '' });
-    fetchAll();
+    fetchAll(false);
   };
 
   const tabs = ['journal', 'watchlist', 'earnings'];
@@ -254,8 +259,6 @@ export default function Journal({ portfolio = [], navigateTo }) {
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans p-8">
       <div className="max-w-[1800px] mx-auto space-y-8">
-
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black uppercase tracking-tighter">
@@ -268,7 +271,6 @@ export default function Journal({ portfolio = [], navigateTo }) {
           </button>
         </div>
 
-        {/* Tabs */}
         <div className="flex bg-zinc-900 border border-zinc-800 rounded-xl p-1 gap-1">
           {tabs.map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
@@ -282,22 +284,19 @@ export default function Journal({ portfolio = [], navigateTo }) {
           <p className="text-center text-zinc-500 text-xs uppercase tracking-widest py-20">Loading...</p>
         ) : (
           <>
-            {/* Journal Tab */}
             {activeTab === 'journal' && (
               <div className="space-y-4">
                 {entries.length === 0 && (
                   <p className="text-center text-zinc-600 text-xs py-20">No trades yet. Add stocks to your portfolio to get started.</p>
                 )}
                 {entries.map(e => (
-                  <JournalCard key={e.id} entry={e} onSave={fetchAll} onDelete={deleteEntry} />
+                  <JournalCard key={e.id} entry={e} onSave={() => fetchAll(false)} onDelete={deleteEntry} />
                 ))}
               </div>
             )}
 
-            {/* Watchlist Tab */}
             {activeTab === 'watchlist' && (
               <div className="space-y-4">
-                {/* Add new */}
                 <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5 space-y-3">
                   <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Add to Watchlist</p>
                   <div className="flex gap-3">
@@ -321,12 +320,11 @@ export default function Journal({ portfolio = [], navigateTo }) {
                   <p className="text-center text-zinc-600 text-xs py-10">No watchlist items yet.</p>
                 )}
                 {watchlist.map(w => (
-                  <WatchlistCard key={w.id} item={w} onSave={fetchAll} onDelete={deleteWatchlist} />
+                  <WatchlistCard key={w.id} item={w} onSave={() => fetchAll(false)} onDelete={deleteWatchlist} />
                 ))}
               </div>
             )}
 
-            {/* Earnings Tab */}
             {activeTab === 'earnings' && (
               <div className="space-y-3">
                 {earnings.length === 0 && (

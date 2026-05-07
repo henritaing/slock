@@ -34,6 +34,7 @@ class JournalEntryCreate(BaseModel):
     lot_id: str
     ticker: str
     bought_at: Optional[float] = None
+    volume: Optional[float] = None  
     target_price: Optional[float] = None
     target_date: Optional[str] = None
     reason: Optional[str] = None
@@ -90,6 +91,19 @@ async def get_metrics(req: MetricsRequest, db: Session = Depends(get_db)):
     except Exception as e:
         logger.exception("Error in /api/metrics")
         raise HTTPException(status_code=500, detail="Failed to calculate metrics")
+    
+@app.get("/api/preview/{ticker}")
+def get_preview(ticker: str, db: Session = Depends(get_db)):
+    raw = get_historical_data(db, [ticker], 12, False)
+    df = raw.get(ticker)
+    if df is None or df.empty:
+        return {"history": [], "name": ticker}
+    
+    return {
+        "name": df['long_name'].iloc[0] if 'long_name' in df.columns else ticker,
+        "history": df[['date', 'adj_close']].to_dict(orient='records'),
+        "last_price": float(df['adj_close'].iloc[-1])
+    }
 
 @app.get("/api/health")
 def health_check():
@@ -133,7 +147,7 @@ def delete_journal_entry(entry_id: str, db: Session = Depends(get_db)):
 def get_earnings(tickers: str, db: Session = Depends(get_db)):
     ticker_list = [t.strip() for t in tickers.split(",")]
     results = {}
-    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=90)
 
     for ticker in ticker_list:
         # Check cache freshness
