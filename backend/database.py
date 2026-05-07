@@ -1,12 +1,12 @@
 from datetime import datetime, timezone
+from sqlalchemy import create_engine, Column, String, Float, Date, Text, DateTime
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
+import uuid
+
 
 def utcnow():
     return datetime.now(timezone.utc)
 
-from sqlalchemy import create_engine, Column, String, Float, Date, Text, DateTime
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-import uuid
 
 DATABASE_URL = "sqlite:///./cache.db"
 
@@ -15,7 +15,9 @@ engine = create_engine(
     connect_args={"check_same_thread": False, "timeout": 15}
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 class MarketCache(Base):
     __tablename__ = "market_cache"
@@ -41,8 +43,6 @@ class JournalEntry(Base):
     notes = Column(Text, nullable=True)      # ongoing notes
     created_at = Column(DateTime(timezone=True), default=utcnow)
     updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
-
-
     
 class WatchlistItem(Base):
     __tablename__ = "watchlist"

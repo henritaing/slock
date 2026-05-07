@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from ..database import MarketCache
+from dateutil.relativedelta import relativedelta
 
 def _get_cached_sector(db: Session, ticker: str) -> dict:
     row = db.query(
@@ -19,7 +20,7 @@ def _get_cached_sector(db: Session, ticker: str) -> dict:
 
 def get_historical_data(db: Session, tickers: list, period_months: int, refresh: bool = False):
     end_date = datetime.now()
-    start_date = (end_date - timedelta(days=period_months * 30)).date()
+    start_date = (end_date - relativedelta(months=period_months)).date()
     
     result_data = {}
 
@@ -45,14 +46,15 @@ def get_historical_data(db: Session, tickers: list, period_months: int, refresh:
                             "date": c.date, 
                             "adj_close": c.adj_close, 
                             "sector": c.sector, 
-                            "industry": c.industry
+                            "industry": c.industry,
+                            "long_name": c.long_name  
                         } for c in cached_rows
                     ])
 
         # 2. Fetch fresh data if cache missing, too short, or refresh forced
         if df is None or df.empty:
             yf_ticker = yf.Ticker(ticker)
-            hist = yf_ticker.history(start=start_date, end=end_date)
+            hist = yf_ticker.history(start=start_date, end=end_date, auto_adjust=True)
             
             if not hist.empty:
                 cached_meta = _get_cached_sector(db, ticker)
@@ -71,7 +73,7 @@ def get_historical_data(db: Session, tickers: list, period_months: int, refresh:
                     'adj_close': hist['Close'].values,
                     'sector': sector,
                     'industry': industry,
-                    'long_name': long_name   # ADD THIS
+                    'long_name': long_name
                 }).reset_index(drop=True)
 
                 # Bulk upsert instead of row-by-row merge
@@ -89,7 +91,12 @@ def get_historical_data(db: Session, tickers: list, period_months: int, refresh:
                 stmt = sqlite_insert(MarketCache).values(rows)
                 stmt = stmt.on_conflict_do_update(
                     index_elements=["ticker", "date"],
-                    set_={"adj_close": stmt.excluded.adj_close}
+                    set_={
+                        "adj_close": stmt.excluded.adj_close,
+                        "sector": stmt.excluded.sector,
+                        "industry": stmt.excluded.industry,
+                        "long_name": stmt.excluded.long_name,
+                    }
                 )
                 db.execute(stmt)
                 db.commit()

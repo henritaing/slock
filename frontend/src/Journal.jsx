@@ -175,7 +175,8 @@ export default function Journal({ portfolio = [], navigateTo }) {
   const tickers = [...new Set(portfolio.map(p => p.ticker))];
 
   const fetchAll = useCallback(async () => {
-    setLoading(true);
+    setLoading(true);  
+
     try {
       const [j, w] = await Promise.all([
         fetch(`${API}/journal`).then(r => r.json()),
@@ -185,11 +186,16 @@ export default function Journal({ portfolio = [], navigateTo }) {
       setWatchlist(w);
 
       if (tickers.length > 0) {
+        const cutoff = new Date();
+        cutoff.setMonth(cutoff.getMonth() - 6);
+        cutoff.setHours(0, 0, 0, 0);
         const e = await fetch(`${API}/earnings?tickers=${tickers.join(',')}`).then(r => r.json());
         const flat = Object.entries(e).flatMap(([ticker, events]) =>
           events.map(ev => ({ ...ev, ticker }))
-        ).sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
-        setEarnings(flat);
+        ).filter(ev => new Date(ev.event_date) >= cutoff)
+          .sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+
+        setEarnings(flat);   
       }
     } catch(err) {
       console.error(err);

@@ -63,22 +63,6 @@ const LandingPage = ({ onEnterDashboard, navigateTo }) => {
         </div>
       </header>
 
-      {/* --- WIDE BENTO SECTION --- */}
-      <section className="px-12 py-20 w-full max-w-[1800px] mx-auto">
-        <div className="bg-zinc-200/40 border border-zinc-800 p-12 rounded-[3.5rem] relative overflow-hidden h-[500px]">
-            <div className="relative z-10">
-              <p className="text-emerald-500 font-black text-sm uppercase tracking-[0.2em] mb-4">Sloth Portfolio</p>
-              <h4 className="text-5xl font-bold mb-6 tracking-tighter leading-none">Visualize your <br/> ratio risk / returns</h4>
-              <p className="text-zinc-500 max-w-sm text-lg font-medium">Stop guessing. See how your assets actually behave under market pressure.</p>
-            </div>
-            <div className="absolute bottom-0 right-0 w-[70%] h-[80%] bg-zinc-800 rounded-tl-[4rem] border-t border-l border-zinc-700 p-8">
-              <div className="w-full h-full bg-zinc-900 rounded-3xl border border-dashed border-zinc-700 flex items-center justify-center text-emerald-800/60 text-xs italic">
-                  [Live Chart Preview Placeholder]
-              </div>
-            </div>
-        </div>
-
-      </section>
 
       {/* --- THE 3-STEP PATH --- */}
       <section className="px-6 py-24 bg-white text-black rounded-[3rem] mx-4 mb-10 max-w-[1800px] mx-auto">

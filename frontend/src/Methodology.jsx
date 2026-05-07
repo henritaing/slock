@@ -62,13 +62,6 @@ const Methodology = ({ navigateTo }) => {
         {/* --- HEADER --- */}
 
         <header className="flex flex-col md:flex-row items-center justify-between px-2 pt-4 pb-32 w-full max-w-[1800px] mx-auto gap-12">
-
-          <div className="w-full md:w-1/2 h-[500px] bg-zinc-900/50 border border-zinc-800 rounded-[4rem] relative flex items-center justify-center overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent" />
-              <span className="text-zinc-700 text-sm font-mono uppercase tracking-[0.3em] rotate-90 underline underline-offset-8">
-                [3D Sloth Clay Visual Placeholder]
-              </span>
-          </div>
           
           <div className="w-full md:w-1/2 text-left">
             <h1 className="text-7xl md:text-9xl font-black tracking-tighter mb-10 leading-none">
@@ -79,8 +72,6 @@ const Methodology = ({ navigateTo }) => {
               Slock operates on radical transparency. We believe you should know exactly how your data is handled and how our engine calculates your path to the horizon.
             </p>
           </div>
-
-          {/* Hero Image Placeholder (3D Sloth) */}
           
         </header>
 
@@ -94,7 +85,7 @@ const Methodology = ({ navigateTo }) => {
               </div>
               <h3 className="text-4xl font-black mb-6 tracking-tight uppercase">Data Sourcing</h3>
               <p className="text-xl text-zinc-500 leading-relaxed font-medium">
-                We pull institutional-grade historical data via the Yahoo Finance API. Every "Adjusted Close" price accounts for stock splits and dividend distributions, ensuring your Cumulative Returns are mathematically accurate.
+                We pull historical data via the Yahoo Finance API. Every "Adjusted Close" price accounts for stock splits and dividend distributions, ensuring your Cumulative Returns are mathematically accurate.
               </p>
             </div>
 
@@ -124,18 +115,12 @@ const Methodology = ({ navigateTo }) => {
             <div className="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center text-white mb-8 shadow-lg shadow-emerald-500/20">
               <BarChart size={32} />
             </div>
-            <h3 className="text-4xl font-black mb-10 tracking-tight uppercase">Quant Metrics</h3>
+            <h3 className="text-4xl font-black mb-10 tracking-tight uppercase">Financial Metrics</h3>
             
             <MathSection 
               title="Annualized Volatility"
               formula=" \sigma_{ann} = \text{std}(\text{returns}_{21d}) \times \sqrt{252} "
               explanation="Volatility measures the speed of price changes. We use a 21-day rolling window and annualize it by the square root of trading days in a year."
-            />
-
-            <MathSection 
-              title="Relative Strength Index"
-              formula=" RSI = 100 - \left[ \frac{100}{1 + \frac{\text{AvgGain}}{\text{AvgLoss}}} \right] "
-              explanation="RSI identifies momentum. Above 70 suggests overbought conditions; below 30 suggests oversold."
             />
 
             <MathSection 

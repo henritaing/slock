@@ -71,6 +71,7 @@ const RiskAnalytics = ({ marketData, portfolio, viewMode, colors, selectedTicker
               <Tooltip 
                 contentStyle={{ backgroundColor: '#09090b', border: '1px solid #27272a', borderRadius: '12px' }}
                 itemStyle={{ fontSize: '11px' }}
+                formatter={(val, name) => [`${val}%`, name]}
               />
               <Legend 
                 verticalAlign="top" 

@@ -1,15 +1,17 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from .database import SessionLocal, init_db
 from .services.finances import get_historical_data
 from .services.analytics import calculate_metrics
 from pydantic import BaseModel
 from typing import List, Optional
 import pandas as pd
-from .database import SessionLocal, init_db, JournalEntry, WatchlistItem, EarningsCache, Base
+from .database import SessionLocal, init_db, JournalEntry, WatchlistItem, EarningsCache
 import yfinance as yf
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
+import logging
+
+logger = logging.getLogger(__name__)
 
 init_db()
 app = FastAPI()
@@ -86,8 +88,8 @@ async def get_metrics(req: MetricsRequest, db: Session = Depends(get_db)):
         }
 
     except Exception as e:
-        print(f"Error in /api/metrics: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        logger.exception("Error in /api/metrics")
+        raise HTTPException(status_code=500, detail="Failed to calculate metrics")
 
 @app.get("/api/health")
 def health_check():
@@ -131,22 +133,35 @@ def delete_journal_entry(entry_id: str, db: Session = Depends(get_db)):
 def get_earnings(tickers: str, db: Session = Depends(get_db)):
     ticker_list = [t.strip() for t in tickers.split(",")]
     results = {}
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
 
     for ticker in ticker_list:
+        # Check cache freshness
+        latest = db.query(EarningsCache).filter(
+            EarningsCache.ticker == ticker
+        ).order_by(EarningsCache.fetched_at.desc()).first()
+
+        if latest and latest.fetched_at > cutoff:
+            rows = db.query(EarningsCache).filter(EarningsCache.ticker == ticker).all()
+            results[ticker] = [
+                {"event_type": r.event_type, "event_date": str(r.event_date)}
+                for r in rows
+            ]
+            continue
+
+        # Fetch fresh
         try:
             cal = yf.Ticker(ticker).calendar
             if not cal:
                 continue
 
             db.query(EarningsCache).filter(EarningsCache.ticker == ticker).delete()
-
             events = []
             event_map = {
                 "Earnings Date": "earnings",
                 "Ex-Dividend Date": "exdividend",
                 "Dividend Date": "dividend"
             }
-
             for label, event_type in event_map.items():
                 val = cal.get(label)
                 if val is None:
@@ -163,20 +178,13 @@ def get_earnings(tickers: str, db: Session = Depends(get_db)):
                         "event_type": event_type,
                         "event_date": str(event_date)
                     })
-
             db.commit()
             results[ticker] = events
-
         except Exception as e:
             print(f"Earnings fetch failed for {ticker}: {e}")
             continue
 
     return results
-
-@app.get("/api/debug/calendar/{ticker}")
-def debug_calendar(ticker: str):
-    cal = yf.Ticker(ticker).calendar
-    return {"type": str(type(cal)), "data": str(cal)}
 
 @app.post("/api/watchlist")
 def create_watchlist_item(item: WatchlistItemCreate, db: Session = Depends(get_db)):
