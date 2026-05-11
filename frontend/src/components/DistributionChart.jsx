@@ -1,31 +1,37 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
+const getLastPrice = (info) => {
+  if (!info) return 0;
+  if (info.last_price) return info.last_price;
+  const h = info.history || [];
+  return h.length > 0 ? h[h.length - 1].adj_close : 0;
+};
+
 const DistributionChart = ({ marketData, portfolio, colors }) => {
-  // 1. Calculate Asset Totals (Static Overview)
-  const assetData = portfolio.map(item => {
+  const { assetData, sectorData } = useMemo(() => {
+  const assets = portfolio.map(item => {
     const tickerInfo = marketData?.[item.ticker];
-    const history = tickerInfo?.history || []; 
-    // Prioritize last_price from the sync, fallback to history
-    const lastPrice = tickerInfo?.last_price || (history.length > 0 ? history[history.length - 1].adj_close : 0);
-    
-    return {
-      name: item.ticker,
-      value: parseFloat((item.volume * lastPrice).toFixed(2))
-    };
+    const history = tickerInfo?.history || [];
+    const lastPrice = getLastPrice(tickerInfo);
+    return { name: item.ticker, value: parseFloat((item.volume * lastPrice).toFixed(2)) };
   }).filter(item => item.value > 0);
 
-  // 2. Calculate Sector Totals (Static Overview)
   const sectorMap = {};
   portfolio.forEach(item => {
     const tickerInfo = marketData?.[item.ticker];
     const sector = tickerInfo?.sector || 'Other/ETF';
     const history = tickerInfo?.history || [];
-    const lastPrice = tickerInfo?.last_price || (history.length > 0 ? history[history.length - 1].adj_close : 0);
-    const value = item.volume * lastPrice;
-    
-    sectorMap[sector] = (sectorMap[sector] || 0) + value;
+    const lastPrice = getLastPrice(tickerInfo);
+    sectorMap[sector] = (sectorMap[sector] || 0) + (item.volume * lastPrice);
   });
+
+  const sectors = Object.entries(sectorMap)
+    .map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }))
+    .sort((a, b) => b.value - a.value);
+
+  return { assetData: assets, sectorData: sectors };
+}, [portfolio, marketData]);
 
   const sectorData = Object.entries(sectorMap)
     .map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }))
@@ -44,7 +50,7 @@ const DistributionChart = ({ marketData, portfolio, colors }) => {
               paddingAngle={5}
               dataKey="value"
               stroke="none"
-              isAnimationActive={true} // Keep it feeling smooth
+              isAnimationActive={false} // Keep it feeling smooth
             >
               {data.map((entry, index) => (
                 <Cell 

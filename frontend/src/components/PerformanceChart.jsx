@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const PerformanceChart = ({ marketData, portfolio, viewMode, colors, selectedTickers, onTickerClick }) => {
@@ -10,42 +10,54 @@ const PerformanceChart = ({ marketData, portfolio, viewMode, colors, selectedTic
   // NEW: Point to .history for the iteration
   const firstTickerHistory = marketData[tickers[0]]?.history || [];
 
-  const chartData = firstTickerHistory.map((entry, index) => {
-    const dataPoint = { date: entry.date };
+  const chartData = useMemo(() => {
+    const firstTickerHistory = marketData[tickers[0]]?.history || [];
     
-    if (viewMode === 'portfolio') {
-      let totalValue = 0;
-      let weightedReturn = 0;
-
-      portfolio.forEach(item => {
-        // NEW: Access .history[index]
-        const day = marketData[item.ticker]?.history?.[index];
-        if (day) {
-          const val = day.adj_close * parseFloat(item.volume);
-          totalValue += val;
-          weightedReturn += (val * day.cum_return);
-        }
+    // Build a date-keyed lookup per ticker for O(1) access
+    const lookups = {};
+    tickers.forEach(t => {
+      lookups[t] = {};
+      (marketData[t]?.history || []).forEach(row => {
+        lookups[t][row.date] = row;
       });
+    });
 
-      dataPoint["My Portfolio"] = totalValue > 0 ? parseFloat(((weightedReturn / totalValue) * 100).toFixed(2)) : 0;
+    return firstTickerHistory.map(entry => {
+      const dataPoint = { date: entry.date };
       
-      const activeBench = tickers.find(t => benchSymbols.includes(t));
-      if (activeBench) {
-        // NEW: Access .history[index]
-        const benchDay = marketData[activeBench]?.history?.[index];
-        dataPoint[activeBench] = benchDay ? parseFloat((benchDay.cum_return * 100).toFixed(2)) : 0;
-      }
-    } else {
-      tickers.forEach(ticker => {
-        // NEW: Access .history[index]
-        const tickerDay = marketData[ticker]?.history?.[index];
-        if (tickerDay) {
-          dataPoint[ticker] = parseFloat((tickerDay.cum_return * 100).toFixed(2));
+      if (viewMode === 'portfolio') {
+        let totalValue = 0;
+        let weightedReturn = 0;
+        portfolio.forEach(item => {
+          const day = lookups[item.ticker]?.[entry.date];
+          if (day) {
+            const val = day.adj_close * parseFloat(item.volume);
+            totalValue += val;
+            weightedReturn += val * day.cum_return;
+          }
+        });
+        dataPoint["My Portfolio"] = totalValue > 0 
+          ? parseFloat(((weightedReturn / totalValue) * 100).toFixed(2)) 
+          : 0;
+        
+        const activeBench = tickers.find(t => benchSymbols.includes(t));
+        if (activeBench) {
+          const benchDay = lookups[activeBench]?.[entry.date];
+          if (benchDay) {
+            dataPoint[activeBench] = parseFloat((benchDay.cum_return * 100).toFixed(2));
+          }
         }
-      });
-    }
-    return dataPoint;
-  });
+      } else {
+        tickers.forEach(ticker => {
+          const tickerDay = lookups[ticker]?.[entry.date];
+          if (tickerDay) {
+            dataPoint[ticker] = parseFloat((tickerDay.cum_return * 100).toFixed(2));
+          }
+        });
+      }
+      return dataPoint;
+    });
+  }, [marketData, portfolio, viewMode]);
 
   return (
     <div className="h-[400px] w-full mt-4">

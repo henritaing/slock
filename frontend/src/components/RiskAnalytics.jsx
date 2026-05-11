@@ -1,22 +1,25 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+
+// Top of file
+const BENCH_TICKERS = ["^GSPC", "URTH", "^FCHI"];
+const BENCH_LABELS = { "^GSPC": "S&P 500", "URTH": "MSCI World", "^FCHI": "CAC 40" };
 
 const RiskAnalytics = ({ marketData, portfolio, viewMode, colors, selectedTickers, onTickerClick }) => {
   if (!marketData || Object.keys(marketData).length === 0) return null;
-
-  const benchSymbols = { "^GSPC": "S&P 500", "URTH": "MSCI World", "^FCHI": "CAC 40" };
   const tickers = Object.keys(marketData);
-  const benchTickers = Object.keys(benchSymbols);
+
 
   const firstTickerData = marketData[tickers[0]];
   const rawHistory = firstTickerData?.history || [];
   
-  const volComparisonData = rawHistory.map((entry, idx) => {
-    const dataPoint = { date: entry.date };
-    const activeBench = tickers.find(t => benchTickers.includes(t));
-    
-    if (activeBench) {
-      const benchDay = marketData[activeBench]?.history?.[idx];
+  const volComparisonData = useMemo(() => {
+    return rawHistory.map((entry, idx) => {
+      const dataPoint = { date: entry.date };
+      const activeBench = tickers.find(t => BENCH_TICKERS.includes(t));
+      
+      if (activeBench) {
+        const benchDay = marketData[activeBench]?.history?.[idx];
       if (benchDay?.volatility !== undefined) {
         // FIX: Use activeBench (e.g., "^FCHI") as the key, not "Market Index"
         dataPoint[activeBench] = parseFloat((benchDay.volatility * 100).toFixed(2));
@@ -38,13 +41,13 @@ const RiskAnalytics = ({ marketData, portfolio, viewMode, colors, selectedTicker
     } else {
       tickers.forEach(t => {
         const tickerDay = marketData[t]?.history?.[idx];
-        if (!benchTickers.includes(t) && tickerDay?.volatility) {
+        if (!BENCH_TICKERS.includes(t) && tickerDay?.volatility) {
           dataPoint[t] = parseFloat((tickerDay.volatility * 100).toFixed(2));
         }
       });
     }
     return dataPoint;
-  }).filter(d => Object.keys(d).length > 1);
+  }).filter(d => Object.keys(d).length > 1), [marketData, portfolio, viewMode]);
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
@@ -87,7 +90,7 @@ const RiskAnalytics = ({ marketData, portfolio, viewMode, colors, selectedTicker
                   .map((key, i) => {
                     const isHighlighted = !selectedTickers || selectedTickers.length === 0 || selectedTickers.includes(key);
                     const isPort = key === "My Portfolio";
-                    const isBench = benchTickers.includes(key);
+                    const isBench = BENCH_TICKERS.includes(key);
 
                     // Defend against missing colors array
                     let strokeColor = (colors && colors.length > 0) ? colors[i % colors.length] : '#888888';
