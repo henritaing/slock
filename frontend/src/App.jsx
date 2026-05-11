@@ -2,6 +2,9 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import axios from 'axios';
 import { LayoutDashboard, RefreshCw } from 'lucide-react';
 
+// Add at the top, alongside other imports:
+import { API_BASE } from './api';   
+
 // Shared Constants
 import { CHART_COLORS } from './constants';
 
@@ -83,7 +86,7 @@ const App = () => {
     if (displayPortfolio.length === 0) return;
     setLoading(true);
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/metrics', {
+      const response = await axios.post(`${API_BASE}/metrics`, {
         tickers: displayPortfolio.map(p => p.ticker),
         benchmark,
         period: period === 'max' ? 60 : parseInt(period),

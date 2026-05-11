@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { API_BASE } from './api';   
 
-const API = 'http://127.0.0.1:8000/api';
 
 const fmt = (dateStr) => {
   if (!dateStr) return '—';
@@ -32,7 +32,7 @@ const JournalCard = ({ entry, onSave, onDelete }) => {
 
   const handleSave = async () => {
     setEditing(false);
-    await fetch(`${API}/journal/${entry.id}`, {
+    await fetch(`${API_BASE}/journal/${entry.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form)
@@ -111,7 +111,7 @@ const WatchlistCard = ({ item, onSave, onDelete }) => {
 
   const handleSave = async () => {
     setEditing(false);
-    await fetch(`${API}/watchlist/${item.id}`, {  // FIXED: was /journal/${entry.id}
+    await fetch(`${API_BASE}/watchlist/${item.id}`, { 
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form)
@@ -174,21 +174,21 @@ export default function Journal({ portfolio = [], navigateTo }) {
 
     try {
       const [j, w] = await Promise.all([
-        fetch(`${API}/journal`).then(r => r.json()),
-        fetch(`${API}/watchlist`).then(r => r.json()),
+        fetch(`${API_BASE}/journal`).then(r => r.json()),
+        fetch(`${API_BASE}/watchlist`).then(r => r.json()),
       ]);
       setEntries(Array.isArray(j) ? j : []);
       setWatchlist(Array.isArray(w) ? w : []);
 
       if (tickersKey) {
-        const cutoff = new Date();
-        cutoff.setMonth(cutoff.getMonth() - 6);
-        cutoff.setHours(0, 0, 0, 0);
 
-        const e = await fetch(`${API}/earnings?tickers=${tickersKey}`).then(r => r.json());
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const e = await fetch(`${API_BASE}/earnings?tickers=${tickersKey}`).then(r => r.json());
         const flat = Object.entries(e || {}).flatMap(([ticker, events]) =>
           (events || []).map(ev => ({ ...ev, ticker }))
-        ).filter(ev => new Date(ev.event_date) >= cutoff)
+        ).filter(ev => new Date(ev.event_date) >= today)
           .sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
 
         setEarnings(flat);
@@ -210,7 +210,7 @@ export default function Journal({ portfolio = [], navigateTo }) {
 
     await Promise.all(
       missing.map(lot =>
-        fetch(`${API}/journal`, {
+        fetch(`${API_BASE}/journal`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -228,24 +228,24 @@ export default function Journal({ portfolio = [], navigateTo }) {
   useEffect(() => {
     fetchAll().then(() => {
       if (portfolio.length > 0) {
-        fetch(`${API}/journal`).then(r => r.json()).then(j => syncLotEntries(j));
+        fetch(`${API_BASE}/journal`).then(r => r.json()).then(j => syncLotEntries(j));
       }
     });
   }, [tickersKey]);
 
   const deleteEntry = async (id) => {
-    await fetch(`${API}/journal/${id}`, { method: 'DELETE' });
+    await fetch(`${API_BASE}/journal/${id}`, { method: 'DELETE' });
     fetchAll(false);
   };
 
   const deleteWatchlist = async (id) => {
-    await fetch(`${API}/watchlist/${id}`, { method: 'DELETE' });
+    await fetch(`${API_BASE}/watchlist/${id}`, { method: 'DELETE' });
     fetchAll(false);
   };
 
   const addWatchlist = async () => {
     if (!newWatch.ticker) return;
-    await fetch(`${API}/watchlist`, {
+    await fetch(`${API_BASE}/watchlist`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...newWatch, ticker: newWatch.ticker.toUpperCase() })

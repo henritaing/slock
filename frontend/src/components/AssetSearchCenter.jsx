@@ -3,6 +3,7 @@ import { Search, X, ArrowRight, ZoomIn, RotateCcw } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, YAxis, Tooltip, XAxis, CartesianGrid, ReferenceArea, ReferenceLine } from 'recharts';
 import { TICKER_MAP } from '../constants';
 import axios from 'axios';
+import { API_BASE } from '../api';
 
 const AssetSearchCenter = ({ onConfirm, onCancel, initialData }) => {
   const debounceRef = useRef(null);
@@ -26,7 +27,7 @@ const AssetSearchCenter = ({ onConfirm, onCancel, initialData }) => {
     setZoomData({ refAreaLeft: '', refAreaRight: '', left: 'dataMin', right: 'dataMax' });
 
     try {
-      const res = await axios.get(`http://127.0.0.1:8000/api/preview/${ticker}`);
+      const res = await axios.get(`${API_BASE}/preview/${ticker}`);
       setPreviewData(res.data.history || []);
     } catch (e) {
       console.error("Search failed", e.response?.data);
@@ -135,18 +136,33 @@ const AssetSearchCenter = ({ onConfirm, onCancel, initialData }) => {
                 )}
 
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart 
-                    data={filteredData}
-                    onMouseDown={e => e && setZoomData(prev => ({ ...prev, refAreaLeft: e.activeLabel }))}
-                    onMouseMove={e => zoomData.refAreaLeft && setZoomData(prev => ({ ...prev, refAreaRight: e.activeLabel }))}
-                    onMouseUp={() => zoom()}
-                    onClick={(e) => {
-                      if (e && e.activePayload) {
-                        const { date, adj_close } = e.activePayload[0].payload;
-                        setSelection(prev => ({ ...prev, date, price: adj_close }));
-                      }
-                    }}
-                  >
+                    <LineChart 
+                      data={filteredData}
+                      onMouseDown={e => {
+                        if (e) setZoomData(prev => ({ ...prev, refAreaLeft: e.activeLabel, refAreaRight: '' }));
+                      }}
+                      onMouseMove={e => {
+                        if (e && zoomData.refAreaLeft && e.activeLabel && e.activeLabel !== zoomData.refAreaLeft) {
+                          setZoomData(prev => ({ ...prev, refAreaRight: e.activeLabel }));
+                        }
+                      }}
+                      onMouseUp={(e) => {
+                        if (!zoomData.refAreaRight) {
+                          const label = e?.activeLabel || zoomData.refAreaLeft;
+                          const point = filteredData.find(d => d.date === label);
+                          if (point) {
+                            setSelection(prev => ({ 
+                              ...prev, 
+                              date: point.date, 
+                              price: parseFloat(point.adj_close) || 0 
+                            }));
+                          }
+                          setZoomData(prev => ({ ...prev, refAreaLeft: '', refAreaRight: '' }));
+                          return;
+                        }
+                        zoom();
+                      }}
+                    >
                     <CartesianGrid strokeDasharray="3 3" stroke="#18181b" vertical={false} />
                     <XAxis dataKey="date" hide domain={[zoomData.left, zoomData.right]} />
                     <YAxis domain={['auto', 'auto']} hide />

@@ -30,7 +30,26 @@ export const TICKER_MAP = {
   "IWDA.AS": "iShares MSCI World"
 };
 
+// Stable color assignment by ticker name
+
+// Reserved (used only by helper for portfolio/benchmark)
+const RESERVED_PORTFOLIO = '#10b981';
+const RESERVED_BENCHMARK = '#3b82f6';
+
+// Available for regular tickers (no emerald/blue collision)
 export const CHART_COLORS = [
-  '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', 
-  '#ec4899', '#06b6d4', '#f97316', '#a855f7', '#14b8a6'
+  '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', 
+  '#f97316', '#a855f7', '#14b8a6', '#facc15', '#0ea5e9'
 ];
+
+export function getTickerColor(ticker, colors = CHART_COLORS) {
+  if (ticker === "My Portfolio") return RESERVED_PORTFOLIO;
+  if (["^GSPC", "URTH", "^FCHI"].includes(ticker)) return RESERVED_BENCHMARK;
+  
+  let hash = 0;
+  for (let i = 0; i < ticker.length; i++) {
+    hash = ((hash << 5) - hash) + ticker.charCodeAt(i);
+    hash |= 0;
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
