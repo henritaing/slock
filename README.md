@@ -1,62 +1,167 @@
-# Slock | Quantitative Portfolio Analyzer
-A full-stack financial dashboard for tracking stock performance, calculating risk metrics (Alpha, Beta, Volatility, RSI), and visualizing unrealized P&L using FastAPI and React (Vite).
+# Slock — The Investment Journal for Disciplined Investors
 
-## 🚀 Key Features (Updated)
-- **Smart Caching:** Database-first strategy with automated gap-filling for 6M, 12M, 24M, and Max horizons.
-- **Risk Engine:** Real-time calculation of Portfolio Beta and Alpha relative to S&P 500, MSCI World, or CAC 40.
-- **Technical Indicators:** 21-day rolling Annualized Volatility and 14-day RSI with "Smart Slicing" to prevent lead-in data gaps.
-- **Force Sync:** One-click cache bypass to fetch fresh market signals directly from Yahoo Finance.
+**Slock is a portfolio analyzer that makes you write down *why* you bought, not just *what* you bought.**
 
-## 🛠 Tech Stack
-- **Frontend:** React 18, Tailwind CSS, Recharts, Lucide-React, Axios.
-- **Backend:** FastAPI (Python 3.11+), Pandas, NumPy, YFinance.
-- **Database:** SQLite (SQLAlchemy) for persistence of historical adjusted closes and metadata.
+Built for self-directed PEA holders and professionals managing 10–50k€ portfolios who want to invest with discipline — not vibes.
 
-## Project Architecture
+---
 
-### 1. Backend (`/backend`)
-- **`main.py`**: FastAPI entry point. Handles CORS, DB initialization, and the `/api/metrics` POST endpoint including Alpha/Beta orchestration.
-- **`services/finances.py`**: Data fetching layer. Includes logic to verify if the cache is "deep enough" for the requested period (e.g., 24M) before falling back to YFinance.
-- **`services/analytics.py`**: The Math Engine. 
-  - Calculates `returns`, `volatility`, `rsi`, and `cum_return`.
-  - **Smart Slicing:** Uses `.dropna()` on technical columns to ensure charts start with valid data points rather than 0.
+## Why Slock Exists
 
-### 2. Frontend (`/src`)
-- **`App.jsx`**: Global state & Layout. Features a VSCode-style sidebar and a unified `handleSync` function with Event-sanitization to prevent JSON circularity errors.
-- **`LandingPage.jsx`**
-- **`Methodology.jsx`**: Financial & Mathematical explanations of metrics
-- **`components/PortfolioInput.jsx`**: Side-slidable page to input portfolio stocks.
-- **`components/layout/DashboardHeader.jsx`**: Dashboard Header to avoid reloading it
-- **`components/layout/Sidebar.jsx`**: Sidebar to simplify App.jsx
-- **`components/ControlPanel.jsx`**: To control filters on the dashboard
-- **`components/AssetSearchCenter.jsx`**: Handle the search of asset for input
-- **`components/RiskAnalytics.jsx`**: Visualizes Volatility and RSI trends across the selected horizon.
-- **`components/PortfolioHealth.jsx`**: Displays core Quant stats (Alpha/Beta) and P&L breakdowns.
-- **`components/PerformanceChart.jsx`**: Displays monthly performance.
-- **`components/DistributionChart.jsx`**: Displays portfolio distribution.
-- **`components/SectorPerformance.jsx`**: Displays index distribution compared to portfolio.
-- **`components/SlothScore.jsx`**: Displays Sloth Metrics.
-- **`components/ShockSimulator.jsx`**: Simple stress test for your portfolio compared to the market index chosen.
+Slock combines two things:
+1. **Dashboard** — visualize what you bought
+2. **Journal** — write down why you bought, predict entry prices, check your hit rate over time
+---
 
+## Current Feature Set
 
-## Data Schemas
+### Dashboard
+- **Portfolio Overview**: Asset & sector distribution (donut charts), total value, P&L, sector exposure vs benchmark
+- **Performance**: Cumulative returns chart, switchable between portfolio-aggregate and per-stock view
+- **Risk Analytics**: 21-day annualized volatility trend, comparable across stocks and benchmarks
+- **Benchmarking**: One-click comparison against S&P 500, MSCI World, or CAC 40
+- **Sloth Score**: A patience metric rewarding long-hold discipline (anti-day-trading behavior)
 
-### API Request (POST `/api/metrics`)
-```json
-{
-  "tickers": ["AAPL", "MSFT"],
-  "benchmark": "SP500",
-  "period": 24,
-  "refresh": false
-}
+### Journal
+- **Auto-created entries** for every position you hold
+- **Editable thesis fields**: why you bought, target price, target date, ongoing notes
+- **Watchlist**: track stocks you want to buy with entry targets and reasoning
+- **Earnings Calendar**: upcoming earnings, dividend, and ex-dividend dates for your holdings
 
-{
-  "marketData": { "AAPL": [...] },
-  "stats": { "beta": 1.15, "alpha": 2.45 }
-}
+### Asset Search Center
+- Interactive chart-based stock entry — instead of typing a buy price, click a point on the chart to lock the historical date and price
+- Zoom by drag-selecting a range on the chart
+- Search by company name or ticker (40+ CAC 40 stocks, US blue chips, European ETFs)
+
+### Smart Backend
+- **Database-first caching**: avoids redundant Yahoo Finance calls
+- **Gap-fill logic**: detects whether the cache is deep enough for the requested horizon
+- **Bulk upsert**: O(1) database round-trips per ticker instead of O(N)
+- **Force-refresh**: one-click cache bypass for real-time freshness
+- **Earnings cache**: 7-day TTL on calendar data to minimize API load
+
+---
+
+## Tech Stack
+
+- **Frontend**: React 18 + Vite, Tailwind CSS, Recharts, Lucide-React, Axios
+- **Backend**: FastAPI (Python 3.11+), Pandas, NumPy, YFinance, SQLAlchemy
+- **Database**: SQLite (will migrate to Postgres on deploy)
+- **Architecture**: Single-page React app with REST API, no auth (intentional for v1)
+
+---
+
+## Architecture
+
+### Backend (`/backend`)
+
+| File | Responsibility |
+|---|---|
+| `main.py` | FastAPI app, endpoint definitions, CORS config |
+| `models.py` | Pydantic request/response schemas |
+| `database.py` | SQLAlchemy ORM models (MarketCache, JournalEntry, WatchlistItem, EarningsCache) |
+| `services/finances.py` | Data fetching layer — cache check, gap-fill, bulk upsert |
+| `services/analytics.py` | Math engine — returns, volatility, cumulative returns |
+
+**Key endpoints**:
+- `POST /api/metrics` — main portfolio analytics (tickers, benchmark, period, refresh)
+- `GET /api/preview/{ticker}` — lightweight chart data for the search modal
+- `GET /api/earnings?tickers=...` — earnings/dividend calendar
+- `GET/POST/PUT/DELETE /api/journal` — full CRUD on journal entries
+- `GET/POST/PUT/DELETE /api/watchlist` — full CRUD on watchlist items
+
+### Frontend (`/src`)
+
+**Top-level pages** (toggled by `view` state):
+- `LandingPage.jsx`, `Methodology.jsx`, `Journal.jsx`, plus the main Dashboard in `App.jsx`
+
+**Layout**:
+- `components/layout/Sidebar.jsx`, `DashboardHeader.jsx`
+
+**Dashboard components**:
+- `ControlPanel.jsx` — view mode, benchmark, period selectors with auto-sync on change
+- `DistributionChart.jsx` — asset + sector donuts
+- `SectorPerformance.jsx` — portfolio vs benchmark sector breakdown
+- `PortfolioHealth.jsx` — P&L cards
+- `PerformanceChart.jsx` — cumulative returns line chart, color-stable across renders
+- `RiskAnalytics.jsx` — volatility trend chart
+
+**Stock entry**:
+- `AssetSearchCenter.jsx` — full-screen chart-driven asset picker (zoom by drag, click to lock entry point)
+
+**Cross-cutting**:
+- `constants.js` — `TICKER_MAP` (40+ supported tickers), `CHART_COLORS`, `getTickerColor()` for stable per-ticker color hashing
+- `api.js` — centralized API base URL
+
+---
+
+## Data Model
+
+### MarketCache (composite PK: ticker + date)
+`ticker, date, adj_close, sector, industry, long_name`
+
+### JournalEntry
+`id (uuid), lot_id, ticker, bought_at, volume, target_price, target_date, reason, notes, created_at, updated_at`
+
+### WatchlistItem
+`id (uuid), ticker, entry_target, thesis, created_at, updated_at`
+
+### EarningsCache
+`id (uuid), ticker, event_type, event_date, fetched_at`
+
+---
+
+## Roadmap
+
+### Now: Chart Lab v1 (Sandbox)
+The differentiating feature. Up to 4 stocks overlaid on a single chart with:
+- Time-shift per stock (±12 months on X axis) for lead-lag analysis
+- Y-axis normalization (% change from start of visible range)
+- Live correlation coefficient on the visible window
+- Toggle 50/200-day moving averages
+- Line and candlestick view modes with volume overlay
+- Import directly from portfolio holdings
+
+### Next: Deploy v1
+- Vercel (frontend) + Railway/Fly.io (backend) + managed Postgres
+- Public soft launch to French finance Discord/Reddit communities
+
+### Post-Launch
+- Watchlist Hit Rate metric (was your prediction right?)
+- "Earnings This Week" dashboard banner
+- Per-thesis review reminders (in-app, not email)
+
+---
+
+## Known Constraints
+
+- **No auth in v1** — data is keyed to localStorage. Migration path to Postgres + Google OAuth is planned around 50+ users.
+- **YFinance dependency** — single point of failure; rate limits mitigated by aggressive caching.
+- **EUR-centric** — all P&L displayed in euros; multi-currency is not on the roadmap.
+- **Mid-long-term focus** — no real-time/intraday data; refresh granularity is daily.
+
+---
+
+## Project Background
+
+Slock started as a personal tool — I was frustrated that Finary and my broker app told me *what I owned* but never *whether I was right to own it*. After 6 months of building, this is the result.
+
+It's vibe-coded prototype quality reviewed line-by-line by me (junior IT solutions engineer). Architecture-first, speed-of-iteration optimized. Cleanly modular enough to onboard a contributor without weeks of context.
+
+I'm sharing it because I think other disciplined retail investors might find it useful — not because I'm chasing a startup. Success in 12 months looks like: a portfolio piece I use myself, with a handful of strangers finding it useful too.
+
+---
+
+## Local Setup
+
+```bash
+# Backend
+cd backend
+pip install -r requirements.txt
+uvicorn backend.main:app --reload
+
+# Frontend
+cd ..
+npm install
+npm run dev
 ```
-
-## 3. Critical Troubleshooting
-- Circular Structure Error: If handleSync fails, ensure the function call is wrapped in an anonymous arrow function () => handleSync() to prevent passing the React Click Event to Axios.
-- Data Horizon: If "Max" shows limited data, use the Refresh (Sync) button to force the backend to fetch full history from Yahoo Finance and overwrite the local cache.
-- Rolling Gaps: Indicators use min_periods=5 to show data as early as possible while maintaining statistical integrity.
