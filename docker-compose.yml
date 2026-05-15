@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: slock
+      POSTGRES_PASSWORD: slock_dev
+      POSTGRES_DB: slock
+    ports:
+      - "5432:5432"
+    volumes:
+      - slock_pgdata:/var/lib/postgresql/data
+
+volumes:
+  slock_pgdata:
