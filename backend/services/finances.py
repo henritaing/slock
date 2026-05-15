@@ -26,7 +26,6 @@ def get_historical_data(db: Session, tickers: list, period_months: int, refresh:
 
     for ticker in tickers:
         df = None
-
         # 1. Check Cache ONLY if Refresh is False
         if not refresh:
             earliest_entry = db.query(MarketCache).filter(

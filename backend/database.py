@@ -3,10 +3,8 @@ from sqlalchemy import create_engine, Column, String, Float, Date, Text, DateTim
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 import uuid
 
-
 def utcnow():
     return datetime.now(timezone.utc)
-
 
 DATABASE_URL = "sqlite:///./cache.db"
 
