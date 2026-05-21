@@ -99,7 +99,7 @@ def get_historical_data(db: Session, tickers: list, period_months: int, refresh:
                 )
                 db.execute(stmt)
                 db.commit()
-    
+
         if df is not None and not df.empty:
             result_data[ticker] = df
 
