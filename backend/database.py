@@ -1,4 +1,3 @@
-import os
 from datetime import datetime, timezone
 from sqlalchemy import create_engine, Column, String, Float, Date, Text, DateTime
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
@@ -7,10 +6,12 @@ import uuid
 def utcnow():
     return datetime.now(timezone.utc)
 
-DATABASE_URL = os.environ["DATABASE_URL"]
+DATABASE_URL = "sqlite:///./cache.db"
 
-connect_args = {"check_same_thread": False, "timeout": 15} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+engine = create_engine(
+    DATABASE_URL, 
+    connect_args={"check_same_thread": False, "timeout": 15}
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 class Base(DeclarativeBase):
