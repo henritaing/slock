@@ -21,7 +21,6 @@ import SectorComparison from './components/SectorPerformance';
 import RiskAnalytics from './components/RiskAnalytics';
 import AssetSearchCenter from './components/AssetSearchCenter';
 import LandingPage from './LandingPage';
-import Methodology from './Methodology';
 import Journal from './Journal';
 
 const App = () => {
@@ -126,10 +125,7 @@ useEffect(() => {
         onEnterDashboard={() => navigateTo('dashboard')} 
         navigateTo={navigateTo} 
       />;
-  if (view === 'methodology') return <Methodology 
-        navigateTo={navigateTo} 
-        onEnterDashboard={() => navigateTo('dashboard')} 
-      />;
+
   if (view === 'journal') return <Journal portfolio={portfolio} navigateTo={navigateTo} />;
 
   return (

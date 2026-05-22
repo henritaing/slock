@@ -22,9 +22,6 @@ const LandingPage = ({ onEnterDashboard, navigateTo }) => {
           <span className="text-2xl font-black tracking-tighter uppercase"><span className="text-emerald-500">Slock</span></span>
         </div>
         <div className="flex items-center gap-10">
-          <div className="hidden md:flex gap-8 text-sm font-bold uppercase tracking-widest text-zinc-500">
-            <button onClick={() => navigateTo('methodology')} className="hover:text-emerald-400 transition-colors">Methodology</button>
-          </div>
           <button 
             onClick={onEnterDashboard}
             className="px-8 py-3 bg-zinc-300 text-black rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-emerald-400 hover:-translate-y-1 transition-all border-b border-zinc-800/50"
