@@ -3,6 +3,7 @@
 **Slock is a portfolio analyzer that makes you write down *why* you bought, not just *what* you bought.**
 
 Built for self-directed PEA holders and professionals managing 10–50k€ portfolios who want to invest with discipline — not vibes.
+No plans of deployment since it's a personal tool for yourself. You can fork the project to add more charts or financial indicators.
 
 ---
 
@@ -46,8 +47,8 @@ Slock combines two things:
 
 - **Frontend**: React 18 + Vite, Tailwind CSS, Recharts, Lucide-React, Axios
 - **Backend**: FastAPI (Python 3.11+), Pandas, NumPy, YFinance, SQLAlchemy
-- **Database**: SQLite (will migrate to Postgres on deploy)
-- **Architecture**: Single-page React app with REST API, no auth (intentional for v1)
+- **Database**: SQLite
+- **Architecture**: Single-page React app with REST API, no auth (intentional)
 
 ---
 
@@ -135,7 +136,7 @@ The differentiating feature. Up to 4 stocks overlaid on a single chart with:
 
 ## Known Constraints
 
-- **No auth in v1** — data is keyed to localStorage. Migration path to Postgres + Google OAuth is planned around 50+ users.
+- **No auth** — data is keyed to localStorage.
 - **YFinance dependency** — single point of failure; rate limits mitigated by aggressive caching.
 - **EUR-centric** — all P&L displayed in euros; multi-currency is not on the roadmap.
 - **Mid-long-term focus** — no real-time/intraday data; refresh granularity is daily.
@@ -144,11 +145,11 @@ The differentiating feature. Up to 4 stocks overlaid on a single chart with:
 
 ## Project Background
 
-Slock started as a personal tool — I was frustrated that Finary and my broker app told me *what I owned* but never *whether I was right to own it*. After 6 months of building, this is the result.
+Slock is a personal tool — I was frustrated that Finary and my broker app told me *what I owned* but never *whether I was right to own it*. After 2 months of building, this is the result.
 
-It's vibe-coded prototype quality reviewed line-by-line by me (junior IT solutions engineer). Architecture-first, speed-of-iteration optimized. Cleanly modular enough to onboard a contributor without weeks of context.
+It's vibe-coded prototype quality reviewed line-by-line by me. Architecture-first, speed-of-iteration optimized. Cleanly modular enough to onboard a contributor without weeks of context.
 
-I'm sharing it because I think other disciplined retail investors might find it useful — not because I'm chasing a startup. Success in 12 months looks like: a portfolio piece I use myself, with a handful of strangers finding it useful too.
+I'm sharing it because I think other disciplined retail investors might find it useful.
 
 ---
 
