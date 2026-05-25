@@ -112,7 +112,7 @@ Slock combines two things:
 
 ---
 
-## Roadmap
+## For future development
 
 ### Now: Chart Lab v1 (Sandbox)
 The differentiating feature. Up to 4 stocks overlaid on a single chart with:
@@ -164,5 +164,7 @@ uvicorn backend.main:app --reload
 # Frontend
 cd ..
 npm install
+cd frontend
+npm run dev
 npm run dev
 ```
